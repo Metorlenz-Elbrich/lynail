@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LYDIE HASLEY — Art & Beauté</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ========== NAV ========== -->
+<nav id="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">💅</span>
+    <span class="brand-name">LYDHAS_Nails</span>
+  </div>
+  <div class="nav-toggle" id="navToggle">☰</div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#accueil">Accueil</a></li>
+    <li><a href="#galerie">Galerie</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#tutorat">Tutorat</a></li>
+    <li><a href="#commande">Commander</a></li>
+    <li><a href="#suivi">Suivi</a></li>
+    <li><a href="#avis">Avis</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section id="accueil" class="hero">
+  <div class="hero-particles" id="particles"></div>
+  <div class="hero-content">
+    <p class="hero-sub">Bienvenue chez</p>
+    <h1 class="hero-title">LYDHAS_Nails Studio</h1>
+    <p class="hero-desc">L'art de sublimer vos ongles — Pose Polygel, nail art, extensions & formations</p>
+    <div class="hero-btns">
+      <a href="#commande" class="btn btn-primary">Prendre RDV</a>
+      <a href="#galerie" class="btn btn-outline">Voir la Galerie</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num" data-target="1200">0</span><span>+</span><p>Clientes</p></div>
+      <div class="stat"><span class="stat-num" data-target="350">0</span><span>+</span><p>Modèles</p></div>
+      <div class="stat"><span class="stat-num" data-target="5">0</span><span> ans</span><p>Expérience</p></div>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span></span>
+    <p>Défiler</p>
+  </div>
+</section>
+
+<!-- ========== GALERIE ========== -->
+<section id="galerie" class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Inspirations</span>
+      <h2>Notre Galerie</h2>
+      <p>Découvrez nos créations uniques</p>
+    </div>
+
+    <!-- Filtres -->
+    <div class="gallery-filters">
+      <button class="filter-btn active" data-filter="all">Tous</button>
+      <button class="filter-btn" data-filter="gel">Gel</button>
+      <button class="filter-btn" data-filter="acrylique">Acrylique</button>
+      <button class="filter-btn" data-filter="nail-art">Nail Art</button>
+      <button class="filter-btn" data-filter="naturel">Naturel</button>
+      <button class="filter-btn" data-filter="french">French</button>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid">
+      <!-- Cards générées par JS -->
+    </div>
+  </div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose">✕</button>
+  <button class="lb-prev" id="lbPrev">‹</button>
+  <button class="lb-next" id="lbNext">›</button>
+  <div class="lb-img-wrap">
+    <img id="lbImg" src="" alt="">
+    <div class="lb-caption" id="lbCaption"></div>
+  </div>
+</div>
+
+<!-- ========== SERVICES ========== -->
+<section id="services" class="section section-dark">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Prestations</span>
+      <h2>Nos Services</h2>
+      <p>Des soins adaptés à chaque besoin</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">💅</div>
+        <h3>Pose Gel</h3>
+        <p>Manucure gel longue durée, brillance parfaite jusqu'à 3 semaines</p>
+        <div class="service-price">À partir de <strong>35€</strong></div>
+        <a href="#commande" class="btn btn-sm">Réserver</a>
+      </div>
+      <div class="service-card featured">
+        <span class="badge">Populaire</span>
+        <div class="service-icon">✨</div>
+        <h3>Nail Art Premium</h3>
+        <p>Designs personnalisés, strass, dégradés, motifs floraux et géométriques</p>
+        <div class="service-price">À partir de <strong>55€</strong></div>
+        <a href="#commande" class="btn btn-sm">Réserver</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔮</div>
+        <h3>Extensions Acrylique</h3>
+        <p>Allongement naturel ou spectaculaire, forme au choix</p>
+        <div class="service-price">À partir de <strong>65€</strong></div>
+        <a href="#commande" class="btn btn-sm">Réserver</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🌸</div>
+        <h3>Soin Naturel</h3>
+        <p>Lime, repousse cuticules, massage, vernis classique ou semi-permanent</p>
+        <div class="service-price">À partir de <strong>25€</strong></div>
+        <a href="#commande" class="btn btn-sm">Réserver</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🇫🇷</div>
+        <h3>French Manucure</h3>
+        <p>French classique, inversée, colorée — toujours élégante</p>
+        <div class="service-price">À partir de <strong>40€</strong></div>
+        <a href="#commande" class="btn btn-sm">Réserver</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🎓</div>
+        <h3>Formation</h3>
+        <p>Apprenez les techniques professionnelles en cours particuliers ou en groupe</p>
+        <div class="service-price">À partir de <strong>80€</strong></div>
+        <a href="#tutorat" class="btn btn-sm">En savoir +</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== TUTORAT ========== -->
+<section id="tutorat" class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Formations</span>
+      <h2>Espace Tutorat</h2>
+      <p>Apprenez à votre rythme</p>
+    </div>
+    <div class="tuto-grid">
+      <div class="tuto-card">
+        <div class="tuto-thumb">
+          <div class="tuto-play">▶</div>
+          <div class="tuto-bg tuto1"></div>
+          <span class="tuto-level niveau-debutant">Débutant</span>
+          <span class="tuto-duration">⏱ 12 min</span>
+        </div>
+        <div class="tuto-body">
+          <h3>Les bases de la pose gel</h3>
+          <p>Préparation, application, séchage UV — tout ce qu'il faut savoir pour débuter</p>
+          <div class="tuto-meta">
+            <span>👁 2.4k vues</span>
+            <span>⭐ 4.9</span>
+          </div>
+          <button class="btn btn-sm tuto-btn" data-id="1">Regarder</button>
+        </div>
+      </div>
+      <div class="tuto-card">
+        <div class="tuto-thumb">
+          <div class="tuto-play">▶</div>
+          <div class="tuto-bg tuto2"></div>
+          <span class="tuto-level niveau-intermediaire">Intermédiaire</span>
+          <span class="tuto-duration">⏱ 24 min</span>
+        </div>
+        <div class="tuto-body">
+          <h3>Nail Art Floral Step by Step</h3>
+          <p>Créez de magnifiques motifs floraux avec des outils simples</p>
+          <div class="tuto-meta">
+            <span>👁 3.1k vues</span>
+            <span>⭐ 4.8</span>
+          </div>
+          <button class="btn btn-sm tuto-btn" data-id="2">Regarder</button>
+        </div>
+      </div>
+      <div class="tuto-card">
+        <div class="tuto-thumb">
+          <div class="tuto-play">▶</div>
+          <div class="tuto-bg tuto3"></div>
+          <span class="tuto-level niveau-avance">Avancé</span>
+          <span class="tuto-duration">⏱ 38 min</span>
+        </div>
+        <div class="tuto-body">
+          <h3>Extensions acrylique pro</h3>
+          <p>Techniques de sculptage, gestion des formes et finitions parfaites</p>
+          <div class="tuto-meta">
+            <span>👁 1.8k vues</span>
+            <span>⭐ 4.7</span>
+          </div>
+          <button class="btn btn-sm tuto-btn" data-id="3">Regarder</button>
+        </div>
+      </div>
+      <div class="tuto-card">
+        <div class="tuto-thumb">
+          <div class="tuto-play">▶</div>
+          <div class="tuto-bg tuto4"></div>
+          <span class="tuto-level niveau-intermediaire">Intermédiaire</span>
+          <span class="tuto-duration">⏱ 19 min</span>
+        </div>
+        <div class="tuto-body">
+          <h3>Dégradé & Ombré Nails</h3>
+          <p>Maîtrisez l'art du dégradé en 5 techniques différentes</p>
+          <div class="tuto-meta">
+            <span>👁 4.2k vues</span>
+            <span>⭐ 5.0</span>
+          </div>
+          <button class="btn btn-sm tuto-btn" data-id="4">Regarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal vidéo tuto -->
+    <div class="modal" id="tutoModal">
+      <div class="modal-box">
+        <button class="modal-close" id="tutoModalClose">✕</button>
+        <div class="modal-video">
+          <div class="video-placeholder">
+            <span class="big-play">▶</span>
+            <p id="tutoModalTitle">Titre du tutoriel</p>
+          </div>
+        </div>
+        <div class="modal-info" id="tutoModalInfo"></div>
+      </div>
+    </div>
+
+    <!-- Inscription formation -->
+    <div class="tuto-cta">
+      <h3>Envie d'une formation personnalisée ?</h3>
+      <p>Cours particuliers en présentiel ou en ligne — adaptés à votre niveau</p>
+      <a href="#commande" class="btn btn-primary">S'inscrire à une formation</a>
+    </div>
+  </div>
+</section>
+
+<!-- ========== COMMANDE ========== -->
+<section id="commande" class="section section-pink">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Réservation</span>
+      <h2>Prise de Commande</h2>
+      <p>Réservez votre séance en quelques clics</p>
+    </div>
+    <div class="order-wrap">
+      <form id="orderForm" class="order-form">
+        <div class="form-steps">
+          <div class="step active" data-step="1"><span>1</span> Prestation</div>
+          <div class="step" data-step="2"><span>2</span> Date & Heure</div>
+          <div class="step" data-step="3"><span>3</span> Vos infos</div>
+          <div class="step" data-step="4"><span>4</span> Confirmation</div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="form-page active" id="step1">
+          <h3>Choisissez votre prestation</h3>
+          <div class="service-choices">
+            <label class="choice-card">
+              <input type="radio" name="service" value="Pose Gel (35€)" required>
+              <div class="choice-body"><span>💅</span><strong>Pose Gel</strong><em>35€</em></div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="service" value="Nail Art Premium (55€)">
+              <div class="choice-body"><span>✨</span><strong>Nail Art Premium</strong><em>55€</em></div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="service" value="Extensions Acrylique (65€)">
+              <div class="choice-body"><span>🔮</span><strong>Extensions Acrylique</strong><em>65€</em></div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="service" value="Soin Naturel (25€)">
+              <div class="choice-body"><span>🌸</span><strong>Soin Naturel</strong><em>25€</em></div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="service" value="French Manucure (40€)">
+              <div class="choice-body"><span>🇫🇷</span><strong>French Manucure</strong><em>40€</em></div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="service" value="Formation (80€)">
+              <div class="choice-body"><span>🎓</span><strong>Formation</strong><em>80€</em></div>
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Modèle souhaité (optionnel)</label>
+            <textarea name="modele" rows="2" placeholder="Décrivez le design ou joignez un lien d'inspiration..."></textarea>
+          </div>
+          <button type="button" class="btn btn-primary next-step">Suivant →</button>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="form-page" id="step2">
+          <h3>Choisissez une date & heure</h3>
+          <div class="calendar-wrap">
+            <div class="mini-cal" id="miniCal"></div>
+          </div>
+          <div class="time-slots" id="timeSlots"></div>
+          <div class="form-nav">
+            <button type="button" class="btn btn-outline prev-step">← Retour</button>
+            <button type="button" class="btn btn-primary next-step">Suivant →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="form-page" id="step3">
+          <h3>Vos informations</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" name="prenom" required placeholder="Marie">
+            </div>
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" name="nom" required placeholder="Dupont">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" name="email" required placeholder="marie@email.com">
+          </div>
+          <div class="form-group">
+            <label>Téléphone *</label>
+            <input type="tel" name="tel" required placeholder="06 XX XX XX XX">
+          </div>
+          <div class="form-group">
+            <label>Message complémentaire</label>
+            <textarea name="message" rows="3" placeholder="Allergies, préférences, questions..."></textarea>
+          </div>
+          <div class="form-nav">
+            <button type="button" class="btn btn-outline prev-step">← Retour</button>
+            <button type="button" class="btn btn-primary next-step">Vérifier →</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="form-page" id="step4">
+          <h3>Récapitulatif de votre commande</h3>
+          <div class="recap-box" id="recapBox"></div>
+          <div class="form-nav">
+            <button type="button" class="btn btn-outline prev-step">← Modifier</button>
+            <button type="submit" class="btn btn-primary">Confirmer la réservation ✓</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Confirmation -->
+      <div class="order-success" id="orderSuccess" style="display:none">
+        <div class="success-icon">🎉</div>
+        <h3>Réservation confirmée !</h3>
+        <p>Votre numéro de suivi : <strong id="trackingNum"></strong></p>
+        <p>Un email de confirmation vous a été envoyé.</p>
+        <a href="#suivi" class="btn btn-primary">Suivre ma commande</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SUIVI ========== -->
+<section id="suivi" class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Tracking</span>
+      <h2>Suivi de Commande</h2>
+      <p>Suivez l'état de votre réservation en temps réel</p>
+    </div>
+    <div class="tracking-wrap">
+      <div class="tracking-search">
+        <input type="text" id="trackInput" placeholder="Entrez votre numéro de suivi (ex: LN-2024-001)">
+        <button class="btn btn-primary" id="trackBtn">Rechercher</button>
+      </div>
+      <div class="tracking-result" id="trackResult" style="display:none">
+        <div class="track-header">
+          <div>
+            <h4 id="trackName"></h4>
+            <p id="trackService"></p>
+          </div>
+          <span class="track-badge" id="trackBadge"></span>
+        </div>
+        <div class="track-steps" id="trackSteps"></div>
+        <div class="track-details" id="trackDetails"></div>
+      </div>
+      <div class="tracking-demo">
+        <p>Numéros de test disponibles :</p>
+        <div class="demo-nums">
+          <button class="demo-num" data-num="LN-2024-001">LN-2024-001</button>
+          <button class="demo-num" data-num="LN-2024-002">LN-2024-002</button>
+          <button class="demo-num" data-num="LN-2024-003">LN-2024-003</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== AVIS ========== -->
+<section id="avis" class="section section-dark">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Témoignages</span>
+      <h2>Ce que disent nos clientes</h2>
+      <p>Des milliers de clientes satisfaites</p>
+    </div>
+    <div class="reviews-carousel">
+      <button class="carousel-arrow left" id="revPrev">‹</button>
+      <div class="reviews-track" id="reviewsTrack">
+        <!-- générés par JS -->
+      </div>
+      <button class="carousel-arrow right" id="revNext">›</button>
+    </div>
+    <div class="review-dots" id="reviewDots"></div>
+
+    <!-- Laisser un avis -->
+    <div class="leave-review">
+      <h3>Laissez votre avis</h3>
+      <form id="reviewForm">
+        <div class="form-row">
+          <div class="form-group">
+            <input type="text" name="reviewer" placeholder="Votre prénom" required>
+          </div>
+          <div class="star-select" id="starSelect">
+            <span data-v="1">★</span>
+            <span data-v="2">★</span>
+            <span data-v="3">★</span>
+            <span data-v="4">★</span>
+            <span data-v="5">★</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <textarea name="comment" rows="3" placeholder="Partagez votre expérience..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Publier mon avis</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CONTACT ========== -->
+<section id="contact" class="section">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="contact-info">
+        <div class="section-header left">
+          <span class="section-tag">Contact</span>
+          <h2>Nous trouver</h2>
+        </div>
+        <div class="contact-items">
+          <div class="contact-item">
+            <span class="ci-icon">📍</span>
+            <div><strong>Adresse</strong><p>12 Rue des Fleurs, 75001 Paris</p></div>
+          </div>
+          <div class="contact-item">
+            <span class="ci-icon">📞</span>
+            <div><strong>Téléphone</strong><p>+33 6 12 34 56 78</p></div>
+          </div>
+          <div class="contact-item">
+            <span class="ci-icon">📧</span>
+            <div><strong>Email</strong><p>contact@luxnails.fr</p></div>
+          </div>
+          <div class="contact-item">
+            <span class="ci-icon">🕐</span>
+            <div><strong>Horaires</strong><p>Lun–Sam : 9h–19h | Dim : Sur RDV</p></div>
+          </div>
+        </div>
+        <div class="social-links">
+          <a href="#" class="social-btn instagram">📷 Instagram</a>
+          <a href="#" class="social-btn tiktok">🎵 TikTok</a>
+          <a href="#" class="social-btn facebook">👤 Facebook</a>
+        </div>
+      </div>
+      <form class="contact-form" id="contactForm">
+        <div class="form-group">
+          <label>Votre nom</label>
+          <input type="text" name="name" placeholder="Prénom Nom" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="vous@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Sujet</label>
+          <select name="sujet">
+            <option>Question sur une prestation</option>
+            <option>Modifier une réservation</option>
+            <option>Formation</option>
+            <option>Partenariat</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea name="msg" rows="4" placeholder="Votre message..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary full">Envoyer le message</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="nav-brand" style="margin-bottom:1rem">
+        <span class="brand-icon">💅</span>
+        <span class="brand-name">LuxNails</span>
+      </div>
+      <p>Votre studio de nail art haut de gamme à Paris. Élégance, créativité, qualité.</p>
+    </div>
+    <div>
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="#galerie">Galerie</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#tutorat">Tutorat</a></li>
+        <li><a href="#commande">Commander</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Prestations</h4>
+      <ul>
+        <li><a href="#">Pose Gel</a></li>
+        <li><a href="#">Nail Art</a></li>
+        <li><a href="#">Extensions</a></li>
+        <li><a href="#">Formations</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Newsletter</h4>
+      <p>Recevez nos offres exclusives</p>
+      <div class="newsletter">
+        <input type="email" placeholder="votre@email.fr">
+        <button class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2024 LuxNails Studio — Tous droits réservés</p>
+    <p>Fait avec 💅 à Paris</p>
+  </div>
+</footer>
+
+<!-- Bouton retour haut -->
+<button class="back-to-top" id="backTop">↑</button>
+
+<!-- Toast notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
