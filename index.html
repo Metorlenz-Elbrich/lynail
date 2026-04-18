@@ -96,50 +96,8 @@
       <h2>Nos Services</h2>
       <p>Des soins adaptés à chaque besoin</p>
     </div>
-    <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">💅</div>
-        <h3>Pose Gel</h3>
-        <p>Manucure gel longue durée, brillance parfaite jusqu'à 3 semaines</p>
-        <div class="service-price">À partir de <strong>55$ CAD</strong></div>
-        <a href="#commande" class="btn btn-sm">Réserver</a>
-      </div>
-      <div class="service-card featured">
-        <span class="badge">Populaire</span>
-        <div class="service-icon">✨</div>
-        <h3>Nail Art Premium</h3>
-        <p>Designs personnalisés, strass, dégradés, motifs floraux et géométriques</p>
-        <div class="service-price">À partir de <strong>80$ CAD</strong></div>
-        <a href="#commande" class="btn btn-sm">Réserver</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔮</div>
-        <h3>Extensions Acrylique</h3>
-        <p>Allongement naturel ou spectaculaire, forme au choix</p>
-        <div class="service-price">À partir de <strong>90$ CAD</strong></div>
-        <a href="#commande" class="btn btn-sm">Réserver</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🌸</div>
-        <h3>Soin Naturel</h3>
-        <p>Lime, repousse cuticules, massage, vernis classique ou semi-permanent</p>
-        <div class="service-price">À partir de <strong>40$ CAD</strong></div>
-        <a href="#commande" class="btn btn-sm">Réserver</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">💅</div>
-        <h3>French Manucure</h3>
-        <p>French classique, inversée, colorée — toujours élégante</p>
-        <div class="service-price">À partir de <strong>60$ CAD</strong></div>
-        <a href="#commande" class="btn btn-sm">Réserver</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🎓</div>
-        <h3>Formation</h3>
-        <p>Apprenez les techniques professionnelles en cours particuliers ou en groupe</p>
-        <div class="service-price">À partir de <strong>120$ CAD</strong></div>
-        <a href="#tutorat" class="btn btn-sm">En savoir +</a>
-      </div>
+    <div class="services-grid" id="servicesGrid">
+      <!-- chargé dynamiquement depuis l'API -->
     </div>
   </div>
 </section>
@@ -152,75 +110,8 @@
       <h2>Espace Tutorat</h2>
       <p>Apprenez à votre rythme</p>
     </div>
-    <div class="tuto-grid">
-      <div class="tuto-card">
-        <div class="tuto-thumb">
-          <div class="tuto-play">▶</div>
-          <div class="tuto-bg tuto1"></div>
-          <span class="tuto-level niveau-debutant">Débutant</span>
-          <span class="tuto-duration">⏱ 12 min</span>
-        </div>
-        <div class="tuto-body">
-          <h3>Les bases de la pose gel</h3>
-          <p>Préparation, application, séchage UV — tout ce qu'il faut savoir pour débuter</p>
-          <div class="tuto-meta">
-            <span>👁 2.4k vues</span>
-            <span>⭐ 4.9</span>
-          </div>
-          <button class="btn btn-sm tuto-btn" data-id="1">Regarder</button>
-        </div>
-      </div>
-      <div class="tuto-card">
-        <div class="tuto-thumb">
-          <div class="tuto-play">▶</div>
-          <div class="tuto-bg tuto2"></div>
-          <span class="tuto-level niveau-intermediaire">Intermédiaire</span>
-          <span class="tuto-duration">⏱ 24 min</span>
-        </div>
-        <div class="tuto-body">
-          <h3>Nail Art Floral Step by Step</h3>
-          <p>Créez de magnifiques motifs floraux avec des outils simples</p>
-          <div class="tuto-meta">
-            <span>👁 3.1k vues</span>
-            <span>⭐ 4.8</span>
-          </div>
-          <button class="btn btn-sm tuto-btn" data-id="2">Regarder</button>
-        </div>
-      </div>
-      <div class="tuto-card">
-        <div class="tuto-thumb">
-          <div class="tuto-play">▶</div>
-          <div class="tuto-bg tuto3"></div>
-          <span class="tuto-level niveau-avance">Avancé</span>
-          <span class="tuto-duration">⏱ 38 min</span>
-        </div>
-        <div class="tuto-body">
-          <h3>Extensions acrylique pro</h3>
-          <p>Techniques de sculptage, gestion des formes et finitions parfaites</p>
-          <div class="tuto-meta">
-            <span>👁 1.8k vues</span>
-            <span>⭐ 4.7</span>
-          </div>
-          <button class="btn btn-sm tuto-btn" data-id="3">Regarder</button>
-        </div>
-      </div>
-      <div class="tuto-card">
-        <div class="tuto-thumb">
-          <div class="tuto-play">▶</div>
-          <div class="tuto-bg tuto4"></div>
-          <span class="tuto-level niveau-intermediaire">Intermédiaire</span>
-          <span class="tuto-duration">⏱ 19 min</span>
-        </div>
-        <div class="tuto-body">
-          <h3>Dégradé & Ombré Nails</h3>
-          <p>Maîtrisez l'art du dégradé en 5 techniques différentes</p>
-          <div class="tuto-meta">
-            <span>👁 4.2k vues</span>
-            <span>⭐ 5.0</span>
-          </div>
-          <button class="btn btn-sm tuto-btn" data-id="4">Regarder</button>
-        </div>
-      </div>
+    <div class="tuto-grid" id="tutoGrid">
+      <!-- chargé dynamiquement depuis l'API -->
     </div>
 
     <!-- Modal vidéo tuto -->
@@ -266,31 +157,8 @@
         <!-- Step 1 -->
         <div class="form-page active" id="step1">
           <h3>Choisissez votre prestation</h3>
-          <div class="service-choices">
-            <label class="choice-card">
-              <input type="radio" name="service" value="Pose Gel (55$ CAD)" required>
-              <div class="choice-body"><span>💅</span><strong>Pose Gel</strong><em>55$ CAD</em></div>
-            </label>
-            <label class="choice-card">
-              <input type="radio" name="service" value="Nail Art Premium (80$ CAD)">
-              <div class="choice-body"><span>✨</span><strong>Nail Art Premium</strong><em>80$ CAD</em></div>
-            </label>
-            <label class="choice-card">
-              <input type="radio" name="service" value="Extensions Acrylique (90$ CAD)">
-              <div class="choice-body"><span>🔮</span><strong>Extensions Acrylique</strong><em>90$ CAD</em></div>
-            </label>
-            <label class="choice-card">
-              <input type="radio" name="service" value="Soin Naturel (40$ CAD)">
-              <div class="choice-body"><span>🌸</span><strong>Soin Naturel</strong><em>40$ CAD</em></div>
-            </label>
-            <label class="choice-card">
-              <input type="radio" name="service" value="French Manucure (60$ CAD)">
-              <div class="choice-body"><span>💅</span><strong>French Manucure</strong><em>60$ CAD</em></div>
-            </label>
-            <label class="choice-card">
-              <input type="radio" name="service" value="Formation (120$ CAD)">
-              <div class="choice-body"><span>🎓</span><strong>Formation</strong><em>120$ CAD</em></div>
-            </label>
+          <div class="service-choices" id="serviceChoices">
+            <!-- chargé dynamiquement depuis l'API -->
           </div>
           <div class="form-group">
             <label>Modèle souhaité (optionnel)</label>

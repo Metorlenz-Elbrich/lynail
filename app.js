@@ -4,6 +4,13 @@
 
 const API = '';   // même origine — laisser vide
 
+/* ---- XSS PROTECTION — échapper toutes les données externes ---- */
+function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 /* ---- NAVBAR SCROLL ---- */
 const navbar    = document.getElementById('navbar');
 const navToggle = document.getElementById('navToggle');
@@ -61,39 +68,37 @@ const revealObserver = new IntersectionObserver(entries => {
 }, { threshold: 0.15 });
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-/* ---- GALLERY DATA ---- */
-const galleryData = [
-  { title: 'Rose Quartz',     category: 'gel',       gradient: 'linear-gradient(135deg,#f8c8e0,#fbe4ef)' },
-  { title: 'Midnight Blue',   category: 'nail-art',  gradient: 'linear-gradient(135deg,#667eea,#764ba2)' },
-  { title: 'Natural Glow',    category: 'naturel',   gradient: 'linear-gradient(135deg,#ffd89b,#19547b)' },
-  { title: 'French Classic',  category: 'french',    gradient: 'linear-gradient(135deg,#f8f9fa,#e9ecef)' },
-  { title: 'Holographic',     category: 'nail-art',  gradient: 'linear-gradient(135deg,#c471f5,#fa71cd)' },
-  { title: 'Nude Stiletto',   category: 'acrylique', gradient: 'linear-gradient(135deg,#f7971e,#ffd200)' },
-  { title: 'Cherry Blossom',  category: 'nail-art',  gradient: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
-  { title: 'Midnight Gel',    category: 'gel',       gradient: 'linear-gradient(135deg,#2c3e50,#3498db)' },
-  { title: 'Gold French',     category: 'french',    gradient: 'linear-gradient(135deg,#f6d365,#fda085)' },
-  { title: 'Nude Acryl',      category: 'acrylique', gradient: 'linear-gradient(135deg,#e0c3fc,#8ec5fc)' },
-  { title: 'Marble Effect',   category: 'nail-art',  gradient: 'linear-gradient(135deg,#e9defa,#fbfcdb)' },
-  { title: 'Baby Pink Gel',   category: 'gel',       gradient: 'linear-gradient(135deg,#fbc2eb,#a6c1ee)' },
-  { title: 'Green Naturel',   category: 'naturel',   gradient: 'linear-gradient(135deg,#d4fc79,#96e6a1)' },
-  { title: 'Coffin Acryl',    category: 'acrylique', gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)' },
-  { title: 'Red French',      category: 'french',    gradient: 'linear-gradient(135deg,#f093fb,#f5576c)' },
-  { title: 'Galaxy Art',      category: 'nail-art',  gradient: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)' },
-];
+/* ---- GALLERY ---- */
+let galleryData = [];
 
 const galleryGrid = document.getElementById('galleryGrid');
 let lightboxIndex = 0;
 let currentFilteredItems = [];
 
+async function loadGallery() {
+  try {
+    const res = await fetch(`${API}/api/gallery`);
+    if (res.ok) galleryData = await res.json();
+  } catch { /* silencieux */ }
+  renderGallery();
+}
+
 function renderGallery(filter = 'all') {
   currentFilteredItems = filter === 'all' ? galleryData : galleryData.filter(i => i.category === filter);
   galleryGrid.innerHTML = '';
+  if (currentFilteredItems.length === 0) {
+    galleryGrid.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:2rem;width:100%">Aucune photo dans cette catégorie pour l\'instant.</p>';
+    return;
+  }
   currentFilteredItems.forEach((item, idx) => {
     const div = document.createElement('div');
     div.className = 'gallery-item';
     div.dataset.idx = idx;
+    const bgStyle = item.imageUrl
+      ? `background-image:url('${item.imageUrl}');background-size:cover;background-position:center`
+      : `background:${item.gradient}`;
     div.innerHTML = `
-      <div class="gallery-bg" style="background:${item.gradient}"></div>
+      <div class="gallery-bg" style="${bgStyle}"></div>
       <div class="gallery-overlay">
         <span>${item.title}</span>
         <em>${categoryLabel(item.category)}</em>
@@ -115,7 +120,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     renderGallery(btn.dataset.filter);
   });
 });
-renderGallery();
 
 /* LIGHTBOX */
 const lightbox  = document.getElementById('lightbox');
@@ -129,10 +133,17 @@ function openLightbox(idx) {
 }
 function updateLightbox() {
   const item = currentFilteredItems[lightboxIndex];
-  lbImg.style.background = item.gradient;
-  lbImg.style.width  = '400px';
-  lbImg.style.height = '400px';
-  lbImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  if (item.imageUrl) {
+    lbImg.src = item.imageUrl;
+    lbImg.style.background = '';
+    lbImg.style.width  = '';
+    lbImg.style.height = '';
+  } else {
+    lbImg.style.background = item.gradient;
+    lbImg.style.width  = '400px';
+    lbImg.style.height = '400px';
+    lbImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  }
   lbImg.style.display = 'block';
   lbCaption.textContent = `${item.title} — ${categoryLabel(item.category)}`;
 }
@@ -148,32 +159,121 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape')     lightbox.classList.remove('open');
 });
 
-/* ---- TUTORIAL MODAL ---- */
-const tutoData = {
-  1: { title: 'Les bases de la pose gel',       desc: "Apprenez les fondamentaux de la manucure gel : préparation de l'ongle, application base, couleur et top coat, séchage sous lampe UV/LED.", level: 'Débutant',       duration: '12 min' },
-  2: { title: 'Nail Art Floral Step by Step',   desc: "Création de motifs floraux détaillés avec dotting tools, pinceaux fins et stamping. Idéal pour les occasions spéciales.",                  level: 'Intermédiaire', duration: '24 min' },
-  3: { title: 'Extensions acrylique pro',       desc: "Maîtrisez la pose d'extensions en acrylique : préparation du lit unguéal, sculptage, formes coffin/stiletto/ballerine.",                  level: 'Avancé',        duration: '38 min' },
-  4: { title: 'Dégradé & Ombré Nails',          desc: "Cinq techniques pour réaliser des dégradés parfaits : éponge, pinceau fan, dégradé gel en biberon, airbrush simulation.",                level: 'Intermédiaire', duration: '19 min' },
+/* ---- SERVICES ---- */
+async function loadServices() {
+  try {
+    const res = await fetch(`${API}/api/services`);
+    if (!res.ok) return;
+    const services = await res.json();
+    const grid = document.getElementById('servicesGrid');
+    if (!grid) return;
+    grid.innerHTML = services.map(s => {
+      const isFormation = s.title === 'Formation';
+      return `
+      <div class="service-card${s.featured ? ' featured' : ''}">
+        ${s.featured ? '<span class="badge">Populaire</span>' : ''}
+        <div class="service-icon">${escHtml(s.icon)}</div>
+        <h3>${escHtml(s.title)}</h3>
+        <p>${escHtml(s.description)}</p>
+        <div class="service-price">À partir de <strong>${escHtml(s.price)}</strong></div>
+        <a href="${isFormation ? '#tutorat' : '#commande'}" class="btn btn-sm">${isFormation ? 'En savoir +' : 'Réserver'}</a>
+      </div>`;
+    }).join('');
+  } catch { /* silencieux */ }
+}
+
+/* ---- TUTORIALS ---- */
+let tutorialsMap = new Map();
+const tutoGradients = {
+  'Débutant':       'linear-gradient(135deg,#ff9a9e,#fecfef)',
+  'Intermédiaire':  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+  'Avancé':         'linear-gradient(135deg,#fccb90,#d57eeb)',
 };
 
-document.querySelectorAll('.tuto-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const d = tutoData[btn.dataset.id];
-    document.getElementById('tutoModalTitle').textContent = d.title;
-    document.getElementById('tutoModalInfo').innerHTML = `
-      <h3>${d.title}</h3>
-      <p style="color:var(--text-light);margin:0.5rem 0 1rem">${d.desc}</p>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <span style="background:var(--pink-pale);color:var(--pink);padding:0.3rem 0.75rem;border-radius:50px;font-size:0.8rem;font-weight:600">Niveau : ${d.level}</span>
-        <span style="background:var(--pink-pale);color:var(--pink);padding:0.3rem 0.75rem;border-radius:50px;font-size:0.8rem;font-weight:600">⏱ ${d.duration}</span>
-      </div>`;
-    document.getElementById('tutoModal').classList.add('open');
-  });
+function getYoutubeEmbed(url) {
+  if (!url) return '';
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : url;
+}
+
+async function loadTutorials() {
+  try {
+    const res = await fetch(`${API}/api/tutorials`);
+    if (!res.ok) return;
+    const tutorials = await res.json();
+    tutorialsMap.clear();
+    tutorials.forEach(t => tutorialsMap.set(String(t._id), t));
+
+    const grid = document.getElementById('tutoGrid');
+    if (!grid) return;
+
+    const levelClass = { 'Débutant':'niveau-debutant', 'Intermédiaire':'niveau-intermediaire', 'Avancé':'niveau-avance' };
+    grid.innerHTML = tutorials.map(t => `
+      <div class="tuto-card">
+        <div class="tuto-thumb">
+          <div class="tuto-play">▶</div>
+          <div class="tuto-bg" style="background:${tutoGradients[t.level] || tutoGradients['Intermédiaire']}"></div>
+          <span class="tuto-level ${levelClass[t.level] || ''}">${escHtml(t.level)}</span>
+          <span class="tuto-duration">⏱ ${escHtml(t.duration)}</span>
+        </div>
+        <div class="tuto-body">
+          <h3>${escHtml(t.title)}</h3>
+          <p>${escHtml(t.shortDesc)}</p>
+          <div class="tuto-meta">
+            <span>👁 ${escHtml(t.views)} vues</span>
+            <span>⭐ ${escHtml(t.rating)}</span>
+          </div>
+          <button class="btn btn-sm tuto-btn" data-id="${escHtml(String(t._id))}">Regarder</button>
+        </div>
+      </div>`).join('');
+  } catch { /* silencieux */ }
+}
+
+/* ---- TUTORIAL MODAL ---- */
+document.getElementById('tutoGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.tuto-btn');
+  if (!btn) return;
+  const t = tutorialsMap.get(btn.dataset.id);
+  if (!t) return;
+
+  const embedUrl = getYoutubeEmbed(t.videoUrl);
+  const videoBox = document.querySelector('#tutoModal .modal-video');
+  if (embedUrl) {
+    videoBox.innerHTML = `<iframe src="${escHtml(embedUrl)}" frameborder="0" allowfullscreen style="width:100%;height:100%;border-radius:12px 12px 0 0;min-height:280px"></iframe>`;
+  } else {
+    videoBox.innerHTML = `<div class="video-placeholder"><span class="big-play">▶</span><p id="tutoModalTitle">${escHtml(t.title)}</p></div>`;
+  }
+
+  document.getElementById('tutoModalInfo').innerHTML = `
+    <h3>${escHtml(t.title)}</h3>
+    <p style="color:var(--text-light);margin:0.5rem 0 1rem">${escHtml(t.description)}</p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <span style="background:var(--pink-pale);color:var(--pink);padding:0.3rem 0.75rem;border-radius:50px;font-size:0.8rem;font-weight:600">Niveau : ${escHtml(t.level)}</span>
+      <span style="background:var(--pink-pale);color:var(--pink);padding:0.3rem 0.75rem;border-radius:50px;font-size:0.8rem;font-weight:600">⏱ ${escHtml(t.duration)}</span>
+    </div>`;
+  document.getElementById('tutoModal').classList.add('open');
 });
+
 document.getElementById('tutoModalClose').onclick = () => document.getElementById('tutoModal').classList.remove('open');
 document.getElementById('tutoModal').addEventListener('click', e => {
   if (e.target === document.getElementById('tutoModal')) document.getElementById('tutoModal').classList.remove('open');
 });
+
+/* ---- PRESTATIONS (formulaire réservation) ---- */
+async function loadPrestations() {
+  try {
+    const res = await fetch(`${API}/api/prestations`);
+    if (!res.ok) return;
+    const prestations = await res.json();
+    const container = document.getElementById('serviceChoices');
+    if (!container) return;
+    container.innerHTML = prestations.map((p, i) => `
+      <label class="choice-card">
+        <input type="radio" name="service" value="${escHtml(p.name)} (${escHtml(p.price)})"${i === 0 ? ' required' : ''}>
+        <div class="choice-body"><span>${escHtml(p.icon)}</span><strong>${escHtml(p.name)}</strong><em>${escHtml(p.price)}</em></div>
+      </label>`).join('');
+  } catch { /* silencieux */ }
+}
 
 /* ---- MINI CALENDAR ---- */
 let calDate      = new Date();
@@ -416,16 +516,16 @@ function renderTrackResult(resultEl, num, order) {
 
   resultEl.innerHTML = `
     <div class="track-header">
-      <div><h4>${order.name}</h4><p>${order.service}</p></div>
-      <span class="track-badge ${badgeClass}">${order.statusLabel || order.status}</span>
+      <div><h4>${escHtml(order.name)}</h4><p>${escHtml(order.service)}</p></div>
+      <span class="track-badge ${escHtml(badgeClass)}">${escHtml(order.statusLabel || order.status)}</span>
     </div>
     <div class="track-steps">${stepsHTML}</div>
     <div class="track-details">
       <table>
-        <tr><td>Numéro</td><td><strong>${num}</strong></td></tr>
-        <tr><td>Date RDV</td><td>${dateStr} à ${order.time || '—'}</td></tr>
-        <tr><td>Prestation</td><td>${order.service}</td></tr>
-        <tr><td>Email</td><td>${order.email || '—'}</td></tr>
+        <tr><td>Numéro</td><td><strong>${escHtml(num)}</strong></td></tr>
+        <tr><td>Date RDV</td><td>${escHtml(dateStr)} à ${escHtml(order.time || '—')}</td></tr>
+        <tr><td>Prestation</td><td>${escHtml(order.service)}</td></tr>
+        <tr><td>Email</td><td>${escHtml(order.email || '—')}</td></tr>
       </table>
     </div>`;
 }
@@ -468,13 +568,13 @@ function renderReviews() {
 
   track.innerHTML = slice.map(r => `
     <div class="review-card">
-      <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
-      <p class="review-text">"${r.text}"</p>
+      <div class="review-stars">${'★'.repeat(Math.min(5, Math.max(0, r.rating)))}${'☆'.repeat(5 - Math.min(5, Math.max(0, r.rating)))}</div>
+      <p class="review-text">&ldquo;${escHtml(r.text)}&rdquo;</p>
       <div class="review-author">
-        <div class="review-avatar">${r.name[0]}</div>
+        <div class="review-avatar">${escHtml((r.name || '?')[0])}</div>
         <div class="review-author-info">
-          <strong>${r.name}</strong>
-          <span>${r.service} · ${r.date}</span>
+          <strong>${escHtml(r.name)}</strong>
+          <span>${escHtml(r.service)} · ${escHtml(r.date)}</span>
         </div>
       </div>
     </div>`).join('');
@@ -647,4 +747,8 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 /* ==========================================
    INITIALISATION ASYNCHRONE
    ========================================== */
+loadGallery();
+loadServices();
+loadTutorials();
+loadPrestations();
 loadReviews();

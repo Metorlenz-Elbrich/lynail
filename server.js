@@ -5,60 +5,182 @@
 require('dotenv').config();
 const express    = require('express');
 const cors       = require('cors');
+const helmet     = require('helmet');
+const rateLimit  = require('express-rate-limit');
+const multer     = require('multer');
 const nodemailer = require('nodemailer');
 const path       = require('path');
+const fs         = require('fs');
+const crypto     = require('crypto');
 const db         = require('./database');
+const { ObjectId } = require('mongodb');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-/* ---------- Middleware ---------- */
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));   // sert index.html, style.css, app.js
+/* ==========================================
+   DOSSIER UPLOADS
+   ========================================== */
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+/* ==========================================
+   SÉCURITÉ — Headers (helmet)
+   A05: Security Misconfiguration
+   ========================================== */
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:    ["'self'"],
+      scriptSrc:     ["'self'", "'unsafe-inline'"],   // inline handlers admin
+      styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc:       ["'self'", "https://fonts.gstatic.com"],
+      imgSrc:        ["'self'", "data:", "https:", "blob:"],
+      connectSrc:    ["'self'"],
+      frameSrc:      ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      frameAncestors:["'self'"],
+      objectSrc:     ["'none'"],
+    }
+  },
+  crossOriginEmbedderPolicy: false, // nécessaire pour les iframes YouTube
+}));
+
+/* ==========================================
+   CORS — même origine uniquement
+   A05: Security Misconfiguration
+   ========================================== */
+const allowedOrigin = process.env.CORS_ORIGIN;
+app.use(cors(allowedOrigin ? { origin: allowedOrigin, credentials: true } : { origin: false }));
+
+/* ==========================================
+   RATE LIMITING — protection brute force
+   A07: Identification and Authentication Failures
+   ========================================== */
+const loginLimiter = rateLimit({
+  windowMs:        15 * 60 * 1000, // 15 minutes
+  max:             10,              // 10 tentatives max
+  message:         { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,   // 1 minute
+  max:      60,           // 60 requêtes par minute
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
+app.use('/api/', apiLimiter);
+
+/* ==========================================
+   MIDDLEWARE COMMUNS
+   ========================================== */
+app.use(express.json({ limit: '50kb' }));   // limite la taille du body JSON
+app.use(express.static(path.join(__dirname)));
+
+/* ==========================================
+   SESSIONS ADMIN — tokens sécurisés
+   A07: Identification and Authentication Failures
+   ========================================== */
+const sessions = new Map(); // token -> expiresAt (ms)
+const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 heures
+
+function createSession() {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, Date.now() + SESSION_TTL);
+  return token;
+}
+
+// Nettoyage périodique des sessions expirées
+setInterval(() => {
+  const now = Date.now();
+  for (const [tok, exp] of sessions) {
+    if (now > exp) sessions.delete(tok);
+  }
+}, 60 * 60 * 1000);
+
+function adminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (!token) return res.status(401).json({ error: 'Non autorisé.' });
+  const exp = sessions.get(token);
+  if (!exp || Date.now() > exp) {
+    sessions.delete(token);
+    return res.status(401).json({ error: 'Session expirée. Reconnectez-vous.' });
+  }
+  next();
+}
+
+/* ==========================================
+   UTILITAIRE — validation ObjectId
+   A03: Injection
+   ========================================== */
+function toObjectId(id) {
+  if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) return null;
+  return new ObjectId(id);
+}
+
+/* ==========================================
+   MULTER — upload d'images
+   A08: Software and Data Integrity Failures
+   ========================================== */
+const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const ALLOWED_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename:    (_req,  file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const name = crypto.randomBytes(16).toString('hex') + ext;
+    cb(null, name);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_MIMES.has(file.mimetype) && ALLOWED_EXTS.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seules les images jpg, png, gif, webp sont acceptées.'));
+    }
+  },
+});
 
 /* ==========================================
    COMMANDES / RÉSERVATIONS
    ========================================== */
 
-/* POST /api/orders — créer une réservation */
 app.post('/api/orders', async (req, res) => {
   const { num, name, service, date, time, email, phone, model_notes, message } = req.body;
 
-  if (!num || !name || !service || !email) {
+  if (!num || !name || !service || !email)
     return res.status(400).json({ error: 'Champs obligatoires manquants (num, name, service, email).' });
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Adresse email invalide.' });
-  }
+  if (String(name).length > 100 || String(service).length > 200)
+    return res.status(400).json({ error: 'Données trop longues.' });
 
   try {
     const order = await db.insertOrder({ num, name, service, date, time, email, phone, model_notes, message });
-
     sendOrderConfirmation({ num, name, service, date, time, email }).catch(err =>
       console.error('[Email] Erreur confirmation :', err.message)
     );
-
     res.status(201).json({ success: true, num: order.num });
   } catch (err) {
-    if (err.code === 'UNIQUE') {
-      return res.status(409).json({ error: 'Ce numéro de commande existe déjà.' });
-    }
+    if (err.code === 'UNIQUE') return res.status(409).json({ error: 'Ce numéro de commande existe déjà.' });
     console.error('[Orders] Erreur :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
 
-/* GET /api/orders/:num — suivi d'une commande */
 app.get('/api/orders/:num', async (req, res) => {
   try {
-    const num   = req.params.num.trim().toUpperCase();
+    const num   = req.params.num.trim().toUpperCase().slice(0, 30);
     const order = await db.getOrder(num);
-
-    if (!order) {
-      return res.status(404).json({ error: 'Commande introuvable.' });
-    }
-
+    if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
     res.json({
       num:         order.num,
       name:        order.name,
@@ -68,7 +190,7 @@ app.get('/api/orders/:num', async (req, res) => {
       email:       order.email,
       status:      order.status,
       statusLabel: order.status_label,
-      steps:       [!!order.step1, !!order.step2, !!order.step3, !!order.step4]
+      steps:       [!!order.step1, !!order.step2, !!order.step3, !!order.step4],
     });
   } catch (err) {
     console.error('[Orders] Erreur getOrder :', err.message);
@@ -80,86 +202,57 @@ app.get('/api/orders/:num', async (req, res) => {
    AVIS
    ========================================== */
 
-/* GET /api/reviews — liste des avis */
-app.get('/api/reviews', async (req, res) => {
+app.get('/api/reviews', async (_req, res) => {
   try {
     const reviewsData = await db.getReviews();
-
-    const reviews = reviewsData.map(r => ({
+    res.json(reviewsData.map(r => ({
       id:      r.id,
       name:    r.name,
       service: r.service,
       rating:  r.rating,
       text:    r.text,
-      date:    relativeDate(r.created_at)
-    }));
-
-    res.json(reviews);
+      date:    relativeDate(r.created_at),
+    })));
   } catch (err) {
-    console.error('[Reviews] Erreur getReviews :', err.message);
+    console.error('[Reviews] Erreur :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
 
-/* POST /api/reviews — soumettre un avis */
 app.post('/api/reviews', async (req, res) => {
   const { name, service, rating, text } = req.body;
-
-  if (!name || !text || !rating) {
-    return res.status(400).json({ error: 'Champs obligatoires manquants (name, rating, text).' });
-  }
+  if (!name || !text || !rating) return res.status(400).json({ error: 'Champs obligatoires manquants.' });
   const r = parseInt(rating);
-  if (isNaN(r) || r < 1 || r > 5) {
-    return res.status(400).json({ error: 'La note doit être comprise entre 1 et 5.' });
-  }
-  if (text.trim().length < 10) {
-    return res.status(400).json({ error: "L'avis est trop court (minimum 10 caractères)." });
-  }
-
+  if (isNaN(r) || r < 1 || r > 5) return res.status(400).json({ error: 'Note entre 1 et 5.' });
+  if (String(text).trim().length < 10) return res.status(400).json({ error: 'Avis trop court (10 car. min).' });
+  if (String(name).length > 80 || String(text).length > 1000) return res.status(400).json({ error: 'Données trop longues.' });
   try {
-    const review = await db.insertReview({
-      name:    name.trim(),
-      service: service?.trim() || 'Cliente LYDHAS',
-      rating:  r,
-      text:    text.trim()
-    });
-
-    res.status(201).json({
-      success: true,
-      review:  { ...review, date: "À l'instant" }
-    });
+    const review = await db.insertReview({ name: name.trim(), service: service?.trim() || 'Cliente LYDHAS', rating: r, text: text.trim() });
+    res.status(201).json({ success: true, review: { ...review, date: "À l'instant" } });
   } catch (err) {
-    console.error('[Reviews] Erreur insertReview :', err.message);
+    console.error('[Reviews] Erreur :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });
 
 /* ==========================================
-   FORMULAIRE DE CONTACT
+   CONTACT
    ========================================== */
 
-/* POST /api/contact */
 app.post('/api/contact', async (req, res) => {
   const { name, email, sujet, msg } = req.body;
-
-  if (!name || !email || !msg) {
-    return res.status(400).json({ error: 'Champs obligatoires manquants (name, email, msg).' });
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Adresse email invalide.' });
-  }
-
+  if (!name || !email || !msg) return res.status(400).json({ error: 'Champs obligatoires manquants.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email invalide.' });
+  if (String(msg).length > 2000) return res.status(400).json({ error: 'Message trop long.' });
   try {
     await db.insertContact({ name: name.trim(), email: email.trim(), subject: sujet ?? 'Autre', message: msg.trim() });
   } catch (err) {
-    console.error('[Contact] Erreur insertContact :', err.message);
+    console.error('[Contact] Erreur :', err.message);
     return res.status(500).json({ error: 'Erreur serveur.' });
   }
-
   sendContactNotification({ name, email, sujet, msg }).catch(err =>
-    console.error('[Email] Erreur notification contact :', err.message)
+    console.error('[Email] Erreur contact :', err.message)
   );
-
   res.json({ success: true });
 });
 
@@ -167,24 +260,279 @@ app.post('/api/contact', async (req, res) => {
    NEWSLETTER
    ========================================== */
 
-/* POST /api/newsletter */
 app.post('/api/newsletter', async (req, res) => {
   const { email } = req.body;
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Adresse email invalide.' });
-  }
-
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: 'Email invalide.' });
   try {
     await db.insertNewsletter(email.trim());
     res.json({ success: true });
   } catch (err) {
-    if (err.code === 'UNIQUE') {
-      return res.json({ success: true, already: true });   // silencieux côté client
-    }
+    if (err.code === 'UNIQUE') return res.json({ success: true, already: true });
     console.error('[Newsletter] Erreur :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
+});
+
+/* ==========================================
+   CONTENU PUBLIC
+   ========================================== */
+
+app.get('/api/gallery',     async (_req, res) => { try { res.json(await db.getGallery());     } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
+app.get('/api/services',    async (_req, res) => { try { res.json(await db.getServices());    } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
+app.get('/api/tutorials',   async (_req, res) => { try { res.json(await db.getTutorials());   } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
+app.get('/api/prestations', async (_req, res) => { try { res.json(await db.getPrestations()); } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
+
+/* ==========================================
+   ADMIN — authentification
+   ========================================== */
+
+app.post('/api/admin/login', loginLimiter, (req, res) => {
+  const { password } = req.body;
+  if (!password || password !== process.env.ADMIN_PASSWORD) {
+    console.warn(`[Admin] Tentative de connexion échouée depuis ${req.ip}`);
+    return res.status(401).json({ error: 'Mot de passe incorrect.' });
+  }
+  const token = createSession();
+  res.json({ success: true, token });
+});
+
+app.post('/api/admin/logout', adminAuth, (req, res) => {
+  const token = req.headers['x-admin-token'];
+  sessions.delete(token);
+  res.json({ success: true });
+});
+
+/* ==========================================
+   ADMIN — Gallery CRUD
+   ========================================== */
+
+app.post('/api/admin/gallery', adminAuth, upload.single('image'), async (req, res) => {
+  const { title, category, imageUrl } = req.body;
+  if (!title || !category) return res.status(400).json({ error: 'title et category requis.' });
+  if (String(title).length > 100) return res.status(400).json({ error: 'Titre trop long.' });
+
+  const catGradients = {
+    gel:        'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
+    'nail-art': 'linear-gradient(135deg,#c471f5,#fa71cd)',
+    acrylique:  'linear-gradient(135deg,#f7971e,#ffd200)',
+    naturel:    'linear-gradient(135deg,#d4fc79,#96e6a1)',
+    french:     'linear-gradient(135deg,#f8f9fa,#e9ecef)',
+  };
+  const allowedCats = new Set(Object.keys(catGradients));
+  if (!allowedCats.has(category)) return res.status(400).json({ error: 'Catégorie invalide.' });
+
+  // Priorité : fichier uploadé > URL fournie > gradient par défaut
+  let finalUrl = '';
+  if (req.file) {
+    finalUrl = `/uploads/${req.file.filename}`;
+  } else if (imageUrl?.trim()) {
+    // Valider que c'est bien une URL HTTP/HTTPS (A10: SSRF mitigation)
+    try {
+      const u = new URL(imageUrl.trim());
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
+      finalUrl = imageUrl.trim();
+    } catch {
+      return res.status(400).json({ error: 'URL invalide. Utilisez une URL http ou https.' });
+    }
+  }
+
+  try {
+    const item = await db.insertGalleryItem({
+      title:     title.trim(),
+      category,
+      imageUrl:  finalUrl,
+      gradient:  catGradients[category],
+    });
+    res.status(201).json(item);
+  } catch (err) {
+    console.error('[Admin/Gallery] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/gallery/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    // Supprimer le fichier local si c'est un upload
+    const item = await db.getGalleryItem(oid);
+    if (item?.imageUrl?.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, item.imageUrl);
+      fs.unlink(filePath, () => {}); // silencieux
+    }
+    await db.deleteGalleryItem(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Gallery] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   ADMIN — Services CRUD
+   ========================================== */
+
+app.post('/api/admin/services', adminAuth, async (req, res) => {
+  const { icon, title, description, price, featured } = req.body;
+  if (!title || !price) return res.status(400).json({ error: 'title et price requis.' });
+  if (String(title).length > 100 || String(price).length > 50) return res.status(400).json({ error: 'Données trop longues.' });
+  try {
+    const s = await db.insertService({
+      icon:        (icon?.trim() || '💅').slice(0, 4),
+      title:       title.trim(),
+      description: String(description || '').trim().slice(0, 500),
+      price:       price.trim(),
+      featured:    !!featured,
+    });
+    res.status(201).json(s);
+  } catch (err) {
+    console.error('[Admin/Services] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.put('/api/admin/services/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.updateService(oid, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Services] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/services/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.deleteService(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Services] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   ADMIN — Tutorials CRUD
+   ========================================== */
+
+app.post('/api/admin/tutorials', adminAuth, async (req, res) => {
+  const { title, shortDesc, description, level, duration, videoUrl, views, rating } = req.body;
+  if (!title || !level) return res.status(400).json({ error: 'title et level requis.' });
+
+  const allowedLevels = new Set(['Débutant', 'Intermédiaire', 'Avancé']);
+  if (!allowedLevels.has(level)) return res.status(400).json({ error: 'Niveau invalide.' });
+
+  let safeVideoUrl = '';
+  if (videoUrl?.trim()) {
+    try {
+      const u = new URL(videoUrl.trim());
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
+      safeVideoUrl = videoUrl.trim();
+    } catch {
+      return res.status(400).json({ error: 'URL vidéo invalide.' });
+    }
+  }
+
+  try {
+    const t = await db.insertTutorial({
+      title:       title.trim().slice(0, 200),
+      shortDesc:   String(shortDesc || '').trim().slice(0, 300),
+      description: String(description || '').trim().slice(0, 2000),
+      level,
+      duration:    String(duration || '').trim().slice(0, 20),
+      videoUrl:    safeVideoUrl,
+      views:       String(views || '0').trim().slice(0, 20),
+      rating:      String(rating || '5.0').trim().slice(0, 5),
+    });
+    res.status(201).json(t);
+  } catch (err) {
+    console.error('[Admin/Tutorials] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.put('/api/admin/tutorials/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.updateTutorial(oid, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Tutorials] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/tutorials/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.deleteTutorial(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Tutorials] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   ADMIN — Prestations CRUD
+   ========================================== */
+
+app.post('/api/admin/prestations', adminAuth, async (req, res) => {
+  const { icon, name, price } = req.body;
+  if (!name || !price) return res.status(400).json({ error: 'name et price requis.' });
+  if (String(name).length > 100 || String(price).length > 50) return res.status(400).json({ error: 'Données trop longues.' });
+  try {
+    const p = await db.insertPrestation({
+      icon:  (icon?.trim() || '💅').slice(0, 4),
+      name:  name.trim(),
+      price: price.trim(),
+    });
+    res.status(201).json(p);
+  } catch (err) {
+    console.error('[Admin/Prestations] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.put('/api/admin/prestations/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.updatePrestation(oid, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Prestations] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/prestations/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.deletePrestation(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Prestations] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   MULTER — gestion des erreurs d'upload
+   ========================================== */
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || err.message?.includes('image')) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 /* ==========================================
@@ -199,138 +547,76 @@ function createTransporter() {
     host:   process.env.SMTP_HOST,
     port:   parseInt(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true',
-    auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
   return _transporter;
 }
 
-const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const MONTHS      = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MONTHS_FULL = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
 async function sendOrderConfirmation({ num, name, service, date, time, email }) {
   const t = createTransporter();
-  if (!t) {
-    console.log(`[Email] SMTP non configuré — email de confirmation non envoyé pour ${num}`);
-    return;
-  }
+  if (!t) { console.log(`[Email] SMTP non configuré — ${num}`); return; }
 
-  const dateStr     = date ? `${date.day} ${MONTHS_FULL[date.month]} ${date.year}` : '—';
+  const dateStr      = date ? `${date.day} ${MONTHS_FULL[date.month]} ${date.year}` : '—';
   const dateStrShort = date ? `${date.day} ${MONTHS[date.month]} ${date.year}` : '—';
 
-  /* ── Email à la cliente ── */
   await t.sendMail({
     from:    `"LYDHAS_Nails Studio" <${process.env.SMTP_USER}>`,
     to:      email,
     subject: `Votre rendez-vous chez LYDHAS_Nails est bien enregistré — ${num}`,
-    html: `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"></head>
+    html: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#fdf0f8;font-family:'Segoe UI',Arial,sans-serif">
   <div style="max-width:580px;margin:2rem auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(233,30,140,0.10)">
-
-    <!-- En-tête -->
     <div style="background:linear-gradient(135deg,#e91e8c,#ff6ec7);padding:2rem 2.5rem;text-align:center">
       <p style="margin:0;color:rgba(255,255,255,0.85);font-size:0.9rem;letter-spacing:2px;text-transform:uppercase">LYDHAS_Nails Studio</p>
       <h1 style="margin:0.5rem 0 0;color:#fff;font-size:1.8rem;font-weight:700">💅 Rendez-vous enregistré !</h1>
     </div>
-
-    <!-- Corps -->
     <div style="padding:2rem 2.5rem">
       <p style="font-size:1rem;color:#4a2040;margin-top:0">Bonjour <strong>${escapeHtml(name)}</strong>,</p>
-
-      <p style="color:#4a2040;line-height:1.7">
-        Nous avons bien reçu votre demande de rendez-vous.
-        <strong>Un retour vous sera fait très prochainement</strong> pour confirmer votre créneau et vous donner toutes les informations nécessaires.
-      </p>
-
-      <!-- Récapitulatif -->
+      <p style="color:#4a2040;line-height:1.7">Nous avons bien reçu votre demande. <strong>Un retour vous sera fait très prochainement.</strong></p>
       <div style="background:#fff0f8;border-radius:12px;padding:1.25rem 1.5rem;margin:1.5rem 0">
-        <p style="margin:0 0 0.75rem;font-weight:700;color:#e91e8c;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px">Récapitulatif de votre demande</p>
+        <p style="margin:0 0 0.75rem;font-weight:700;color:#e91e8c;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px">Récapitulatif</p>
         <table style="width:100%;border-collapse:collapse;font-size:0.92rem">
-          <tr>
-            <td style="padding:0.45rem 0;color:#8a6080;font-weight:600;width:140px">N° de suivi</td>
-            <td style="padding:0.45rem 0"><strong style="color:#e91e8c">${num}</strong></td>
-          </tr>
-          <tr>
-            <td style="padding:0.45rem 0;color:#8a6080;font-weight:600">Prestation</td>
-            <td style="padding:0.45rem 0;color:#4a2040">${escapeHtml(service)}</td>
-          </tr>
-          <tr>
-            <td style="padding:0.45rem 0;color:#8a6080;font-weight:600">Date souhaitée</td>
-            <td style="padding:0.45rem 0;color:#4a2040">${dateStr} à ${time ?? '—'}</td>
-          </tr>
+          <tr><td style="padding:0.45rem 0;color:#8a6080;font-weight:600;width:140px">N° de suivi</td><td><strong style="color:#e91e8c">${num}</strong></td></tr>
+          <tr><td style="padding:0.45rem 0;color:#8a6080;font-weight:600">Prestation</td><td style="color:#4a2040">${escapeHtml(service)}</td></tr>
+          <tr><td style="padding:0.45rem 0;color:#8a6080;font-weight:600">Date souhaitée</td><td style="color:#4a2040">${dateStr} à ${time ?? '—'}</td></tr>
         </table>
       </div>
-
-      <p style="color:#4a2040;line-height:1.7">
-        Vous pouvez suivre l'état de votre réservation à tout moment en utilisant votre numéro de suivi sur notre site.
-      </p>
-
-      <p style="color:#4a2040;margin-bottom:0">
-        À très bientôt,<br>
-        <strong style="color:#e91e8c">Lydie — LYDHAS_Nails Studio</strong>
-      </p>
+      <p style="color:#4a2040;margin-bottom:0">À très bientôt,<br><strong style="color:#e91e8c">Lydie — LYDHAS_Nails Studio</strong></p>
     </div>
-
-    <!-- Pied de page -->
     <div style="background:#fdf0f8;padding:1rem 2.5rem;text-align:center;font-size:0.78rem;color:#8a6080">
-      Cet email a été envoyé depuis <strong>metorlenz2@gmail.com</strong> suite à votre demande de rendez-vous.
+      Email envoyé suite à votre demande de rendez-vous.
     </div>
   </div>
-</body>
-</html>`
+</body></html>`,
   });
 
-  /* ── Notification au salon ── */
   await t.sendMail({
     from:    `"LYDHAS_Nails Studio" <${process.env.SMTP_USER}>`,
     to:      process.env.OWNER_EMAIL,
     subject: `📅 Nouvelle réservation — ${escapeHtml(name)} — ${dateStrShort}`,
-    html: `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"></head>
+    html: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#fdf0f8;font-family:'Segoe UI',Arial,sans-serif">
-  <div style="max-width:580px;margin:2rem auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(233,30,140,0.10)">
-
+  <div style="max-width:580px;margin:2rem auto;background:#fff;border-radius:16px;overflow:hidden">
     <div style="background:linear-gradient(135deg,#1a0a14,#6b1548);padding:1.5rem 2.5rem">
-      <p style="margin:0;color:rgba(255,255,255,0.6);font-size:0.8rem;text-transform:uppercase;letter-spacing:2px">LYDHAS_Nails Studio</p>
-      <h2 style="margin:0.4rem 0 0;color:#fff;font-size:1.4rem">📅 Nouvelle demande de rendez-vous</h2>
+      <h2 style="margin:0;color:#fff;font-size:1.4rem">📅 Nouvelle demande de rendez-vous</h2>
     </div>
-
     <div style="padding:2rem 2.5rem">
       <table style="width:100%;border-collapse:collapse;font-size:0.93rem">
-        <tr style="border-bottom:1px solid #f0e0e8">
-          <td style="padding:0.6rem 0;color:#8a6080;font-weight:600;width:160px">N° de commande</td>
-          <td style="padding:0.6rem 0"><strong style="color:#e91e8c">${num}</strong></td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e0e8">
-          <td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Cliente</td>
-          <td style="padding:0.6rem 0"><strong>${escapeHtml(name)}</strong></td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e0e8">
-          <td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Email</td>
-          <td style="padding:0.6rem 0"><a href="mailto:${escapeHtml(email)}" style="color:#e91e8c">${escapeHtml(email)}</a></td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e0e8">
-          <td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Prestation</td>
-          <td style="padding:0.6rem 0">${escapeHtml(service)}</td>
-        </tr>
-        <tr>
-          <td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Date souhaitée</td>
-          <td style="padding:0.6rem 0"><strong>${dateStr} à ${time ?? '—'}</strong></td>
-        </tr>
+        <tr style="border-bottom:1px solid #f0e0e8"><td style="padding:0.6rem 0;color:#8a6080;font-weight:600;width:160px">N° commande</td><td><strong style="color:#e91e8c">${num}</strong></td></tr>
+        <tr style="border-bottom:1px solid #f0e0e8"><td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Cliente</td><td><strong>${escapeHtml(name)}</strong></td></tr>
+        <tr style="border-bottom:1px solid #f0e0e8"><td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Email</td><td><a href="mailto:${escapeHtml(email)}" style="color:#e91e8c">${escapeHtml(email)}</a></td></tr>
+        <tr style="border-bottom:1px solid #f0e0e8"><td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Prestation</td><td>${escapeHtml(service)}</td></tr>
+        <tr><td style="padding:0.6rem 0;color:#8a6080;font-weight:600">Date souhaitée</td><td><strong>${dateStr} à ${time ?? '—'}</strong></td></tr>
       </table>
-
-      <div style="margin-top:1.5rem;padding:1rem;background:#fff0f8;border-radius:8px;font-size:0.85rem;color:#8a6080">
-        Répondez directement à cet email ou contactez la cliente à <a href="mailto:${escapeHtml(email)}" style="color:#e91e8c">${escapeHtml(email)}</a> pour confirmer le rendez-vous.
-      </div>
     </div>
   </div>
-</body>
-</html>`
+</body></html>`,
   });
 
-  console.log(`[Email] Confirmation envoyée à ${email} + notification à ${process.env.OWNER_EMAIL}`);
+  console.log(`[Email] Confirmation → ${email}`);
 }
 
 async function sendContactNotification({ name, email, sujet, msg }) {
@@ -345,7 +631,7 @@ async function sendContactNotification({ name, email, sujet, msg }) {
       <p><strong>De :</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
       <p><strong>Sujet :</strong> ${escapeHtml(sujet)}</p>
       <hr>
-      <p>${escapeHtml(msg).replace(/\n/g, '<br>')}</p>`
+      <p>${escapeHtml(msg).replace(/\n/g, '<br>')}</p>`,
   });
 }
 
@@ -356,20 +642,26 @@ async function sendContactNotification({ name, email, sujet, msg }) {
 function relativeDate(iso) {
   if (!iso) return 'Récemment';
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days === 0)  return "Aujourd'hui";
-  if (days === 1)  return 'Il y a 1 jour';
-  if (days < 7)   return `Il y a ${days} jours`;
-  if (days < 14)  return 'Il y a 1 semaine';
-  if (days < 30)  return `Il y a ${Math.floor(days / 7)} semaines`;
-  if (days < 60)  return 'Il y a 1 mois';
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return 'Il y a 1 jour';
+  if (days < 7)  return `Il y a ${days} jours`;
+  if (days < 14) return 'Il y a 1 semaine';
+  if (days < 30) return `Il y a ${Math.floor(days / 7)} semaines`;
+  if (days < 60) return 'Il y a 1 mois';
   return `Il y a ${Math.floor(days / 30)} mois`;
 }
 
 function escapeHtml(s) {
   return String(s || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#39;');
 }
+
+/* Route admin page */
+app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
 /* SPA fallback */
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -379,16 +671,14 @@ app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
    ========================================== */
 const server = app.listen(PORT, () => {
   console.log(`\n✅  LYDHAS_Nails Studio — serveur démarré`);
-  console.log(`🌐  http://localhost:${PORT}\n`);
-  if (!process.env.SMTP_HOST) {
-    console.log('📧  Email désactivé (SMTP_HOST non configuré dans .env)\n');
-  }
+  console.log(`🌐  http://localhost:${PORT}`);
+  console.log(`🔐  Admin : http://localhost:${PORT}/admin\n`);
+  if (!process.env.SMTP_HOST) console.log('📧  Email désactivé (SMTP_HOST non configuré)\n');
 });
 
 server.on('error', err => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`\n❌  Le port ${PORT} est déjà utilisé.`);
-    console.error(`   Fermez l'autre serveur ou changez PORT dans .env\n`);
+    console.error(`\n❌  Port ${PORT} déjà utilisé.`);
     console.error(`   Windows : netstat -ano | findstr :${PORT}  puis  taskkill /PID <id> /F\n`);
   } else {
     console.error('Erreur serveur :', err.message);
