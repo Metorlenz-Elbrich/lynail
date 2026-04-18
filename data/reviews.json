@@ -1,0 +1,65 @@
+[
+  {
+    "id": 7,
+    "name": "Clara B.",
+    "service": "Cliente LuxNails",
+    "rating": 5,
+    "text": "Service exceptionnel, je reviendrai !",
+    "approved": true,
+    "created_at": "2026-04-18T06:53:46.773Z"
+  },
+  {
+    "id": 1,
+    "name": "Sophie M.",
+    "service": "Nail Art Premium",
+    "rating": 5,
+    "text": "Absolument époustouflant ! Mes ongles sont devenus de vraies œuvres d'art. L'accueil est chaleureux et le résultat dépasse toutes mes attentes.",
+    "approved": true,
+    "created_at": "2026-04-16T06:53:32.480Z"
+  },
+  {
+    "id": 2,
+    "name": "Camille L.",
+    "service": "Pose Gel",
+    "rating": 5,
+    "text": "Ma première pose gel ici et je suis conquise ! Tenue parfaite après 3 semaines, brillance incroyable. Je reviens sans hésiter.",
+    "approved": true,
+    "created_at": "2026-04-13T06:53:32.480Z"
+  },
+  {
+    "id": 3,
+    "name": "Julie R.",
+    "service": "Extensions Acrylique",
+    "rating": 5,
+    "text": "Je cherchais des extensions naturelles et c'est exactement ce que j'ai eu. Technique impeccable, résultat magnifique et très confortable.",
+    "approved": true,
+    "created_at": "2026-04-11T06:53:32.480Z"
+  },
+  {
+    "id": 4,
+    "name": "Marie T.",
+    "service": "Formation",
+    "rating": 5,
+    "text": "La formation est très complète et bien expliquée. En quelques heures, j'ai appris des techniques que je pensais impossibles. Merci infiniment !",
+    "approved": true,
+    "created_at": "2026-04-04T06:53:32.480Z"
+  },
+  {
+    "id": 5,
+    "name": "Léa D.",
+    "service": "French Manucure",
+    "rating": 4,
+    "text": "Très satisfaite de ma French manucure. Propre, élégante, exactement ce que je voulais. Je recommande à toutes mes amies.",
+    "approved": true,
+    "created_at": "2026-03-28T06:53:32.480Z"
+  },
+  {
+    "id": 6,
+    "name": "Emma B.",
+    "service": "Nail Art Floral",
+    "rating": 5,
+    "text": "Je voulais quelque chose d'unique pour mon mariage et j'ai été gâtée ! Motifs floraux exquis, un vrai travail d'artiste. Merci LuxNails !",
+    "approved": true,
+    "created_at": "2026-03-19T06:53:32.480Z"
+  }
+]

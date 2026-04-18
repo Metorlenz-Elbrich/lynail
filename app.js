@@ -1,11 +1,13 @@
 /* ========================================
-   LuxNails — app.js
+   LuxNails — app.js  (avec backend API)
    ======================================== */
 
+const API = '';   // même origine — laisser vide
+
 /* ---- NAVBAR SCROLL ---- */
-const navbar = document.getElementById('navbar');
+const navbar    = document.getElementById('navbar');
 const navToggle = document.getElementById('navToggle');
-const navLinks = document.getElementById('navLinks');
+const navLinks  = document.getElementById('navLinks');
 
 window.addEventListener('scroll', () => {
   navbar.classList.toggle('scrolled', window.scrollY > 60);
@@ -14,12 +16,11 @@ window.addEventListener('scroll', () => {
 
 navToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
 navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
-
 document.getElementById('backTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
 /* ---- PARTICLES HERO ---- */
 const particlesContainer = document.getElementById('particles');
-const emojis = ['💅', '✨', '🌸', '💎', '⭐', '🫁', '💕'];
+const emojis = ['💅', '✨', '🌸', '💎', '⭐', '🩷', '💕'];
 for (let i = 0; i < 22; i++) {
   const p = document.createElement('span');
   p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -62,22 +63,22 @@ document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 /* ---- GALLERY DATA ---- */
 const galleryData = [
-  { title: 'Rose Quartz', category: 'gel', gradient: 'linear-gradient(135deg,#f8c8e0,#fbe4ef)' },
-  { title: 'Midnight Blue', category: 'nail-art', gradient: 'linear-gradient(135deg,#667eea,#764ba2)' },
-  { title: 'Natural Glow', category: 'naturel', gradient: 'linear-gradient(135deg,#ffd89b,#19547b)' },
-  { title: 'French Classic', category: 'french', gradient: 'linear-gradient(135deg,#f8f9fa,#e9ecef)' },
-  { title: 'Holographic', category: 'nail-art', gradient: 'linear-gradient(135deg,#c471f5,#fa71cd)' },
-  { title: 'Nude Stiletto', category: 'acrylique', gradient: 'linear-gradient(135deg,#f7971e,#ffd200)' },
-  { title: 'Cherry Blossom', category: 'nail-art', gradient: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
-  { title: 'Midnight Gel', category: 'gel', gradient: 'linear-gradient(135deg,#2c3e50,#3498db)' },
-  { title: 'Gold French', category: 'french', gradient: 'linear-gradient(135deg,#f6d365,#fda085)' },
-  { title: 'Nude Acryl', category: 'acrylique', gradient: 'linear-gradient(135deg,#e0c3fc,#8ec5fc)' },
-  { title: 'Marble Effect', category: 'nail-art', gradient: 'linear-gradient(135deg,#e9defa,#fbfcdb)' },
-  { title: 'Baby Pink Gel', category: 'gel', gradient: 'linear-gradient(135deg,#fbc2eb,#a6c1ee)' },
-  { title: 'Green Naturel', category: 'naturel', gradient: 'linear-gradient(135deg,#d4fc79,#96e6a1)' },
-  { title: 'Coffin Acryl', category: 'acrylique', gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)' },
-  { title: 'Red French', category: 'french', gradient: 'linear-gradient(135deg,#f093fb,#f5576c)' },
-  { title: 'Galaxy Art', category: 'nail-art', gradient: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)' },
+  { title: 'Rose Quartz',     category: 'gel',       gradient: 'linear-gradient(135deg,#f8c8e0,#fbe4ef)' },
+  { title: 'Midnight Blue',   category: 'nail-art',  gradient: 'linear-gradient(135deg,#667eea,#764ba2)' },
+  { title: 'Natural Glow',    category: 'naturel',   gradient: 'linear-gradient(135deg,#ffd89b,#19547b)' },
+  { title: 'French Classic',  category: 'french',    gradient: 'linear-gradient(135deg,#f8f9fa,#e9ecef)' },
+  { title: 'Holographic',     category: 'nail-art',  gradient: 'linear-gradient(135deg,#c471f5,#fa71cd)' },
+  { title: 'Nude Stiletto',   category: 'acrylique', gradient: 'linear-gradient(135deg,#f7971e,#ffd200)' },
+  { title: 'Cherry Blossom',  category: 'nail-art',  gradient: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
+  { title: 'Midnight Gel',    category: 'gel',       gradient: 'linear-gradient(135deg,#2c3e50,#3498db)' },
+  { title: 'Gold French',     category: 'french',    gradient: 'linear-gradient(135deg,#f6d365,#fda085)' },
+  { title: 'Nude Acryl',      category: 'acrylique', gradient: 'linear-gradient(135deg,#e0c3fc,#8ec5fc)' },
+  { title: 'Marble Effect',   category: 'nail-art',  gradient: 'linear-gradient(135deg,#e9defa,#fbfcdb)' },
+  { title: 'Baby Pink Gel',   category: 'gel',       gradient: 'linear-gradient(135deg,#fbc2eb,#a6c1ee)' },
+  { title: 'Green Naturel',   category: 'naturel',   gradient: 'linear-gradient(135deg,#d4fc79,#96e6a1)' },
+  { title: 'Coffin Acryl',    category: 'acrylique', gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)' },
+  { title: 'Red French',      category: 'french',    gradient: 'linear-gradient(135deg,#f093fb,#f5576c)' },
+  { title: 'Galaxy Art',      category: 'nail-art',  gradient: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)' },
 ];
 
 const galleryGrid = document.getElementById('galleryGrid');
@@ -103,7 +104,7 @@ function renderGallery(filter = 'all') {
 }
 
 function categoryLabel(c) {
-  const labels = { gel: 'Pose Gel', 'nail-art': 'Nail Art', acrylique: 'Acrylique', naturel: 'Naturel', french: 'French' };
+  const labels = { gel:'Pose Gel', 'nail-art':'Nail Art', acrylique:'Acrylique', naturel:'Naturel', french:'French' };
   return labels[c] || c;
 }
 
@@ -114,13 +115,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     renderGallery(btn.dataset.filter);
   });
 });
-
 renderGallery();
 
 /* LIGHTBOX */
-const lightbox = document.getElementById('lightbox');
-const lbImg    = document.getElementById('lbImg');
-const lbCaption= document.getElementById('lbCaption');
+const lightbox  = document.getElementById('lightbox');
+const lbImg     = document.getElementById('lbImg');
+const lbCaption = document.getElementById('lbCaption');
 
 function openLightbox(idx) {
   lightboxIndex = idx;
@@ -130,8 +130,9 @@ function openLightbox(idx) {
 function updateLightbox() {
   const item = currentFilteredItems[lightboxIndex];
   lbImg.style.background = item.gradient;
-  lbImg.style.width = '400px'; lbImg.style.height = '400px';
-  lbImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // transparent
+  lbImg.style.width  = '400px';
+  lbImg.style.height = '400px';
+  lbImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   lbImg.style.display = 'block';
   lbCaption.textContent = `${item.title} — ${categoryLabel(item.category)}`;
 }
@@ -142,17 +143,17 @@ document.getElementById('lbNext').onclick  = () => { lightboxIndex = (lightboxIn
 lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
 document.addEventListener('keydown', e => {
   if (!lightbox.classList.contains('open')) return;
-  if (e.key === 'ArrowLeft') document.getElementById('lbPrev').click();
+  if (e.key === 'ArrowLeft')  document.getElementById('lbPrev').click();
   if (e.key === 'ArrowRight') document.getElementById('lbNext').click();
-  if (e.key === 'Escape') lightbox.classList.remove('open');
+  if (e.key === 'Escape')     lightbox.classList.remove('open');
 });
 
 /* ---- TUTORIAL MODAL ---- */
 const tutoData = {
-  1: { title: 'Les bases de la pose gel', desc: 'Apprenez les fondamentaux de la manucure gel : préparation de l\'ongle, application base, couleur et top coat, séchage sous lampe UV/LED.', level: 'Débutant', duration: '12 min' },
-  2: { title: 'Nail Art Floral Step by Step', desc: 'Création de motifs floraux détaillés avec dotting tools, pinceaux fins et stamping. Idéal pour les occasions spéciales.', level: 'Intermédiaire', duration: '24 min' },
-  3: { title: 'Extensions acrylique pro', desc: 'Maîtrisez la pose d\'extensions en acrylique : préparation du lit unguéal, sculptage, formes coffin/stiletto/ballerine.', level: 'Avancé', duration: '38 min' },
-  4: { title: 'Dégradé & Ombré Nails', desc: 'Cinq techniques pour réaliser des dégradés parfaits : éponge, pinceau fan, dégradé gel en biberon, airbrush simulation.', level: 'Intermédiaire', duration: '19 min' },
+  1: { title: 'Les bases de la pose gel',       desc: "Apprenez les fondamentaux de la manucure gel : préparation de l'ongle, application base, couleur et top coat, séchage sous lampe UV/LED.", level: 'Débutant',       duration: '12 min' },
+  2: { title: 'Nail Art Floral Step by Step',   desc: "Création de motifs floraux détaillés avec dotting tools, pinceaux fins et stamping. Idéal pour les occasions spéciales.",                  level: 'Intermédiaire', duration: '24 min' },
+  3: { title: 'Extensions acrylique pro',       desc: "Maîtrisez la pose d'extensions en acrylique : préparation du lit unguéal, sculptage, formes coffin/stiletto/ballerine.",                  level: 'Avancé',        duration: '38 min' },
+  4: { title: 'Dégradé & Ombré Nails',          desc: "Cinq techniques pour réaliser des dégradés parfaits : éponge, pinceau fan, dégradé gel en biberon, airbrush simulation.",                level: 'Intermédiaire', duration: '19 min' },
 };
 
 document.querySelectorAll('.tuto-btn').forEach(btn => {
@@ -175,23 +176,23 @@ document.getElementById('tutoModal').addEventListener('click', e => {
 });
 
 /* ---- MINI CALENDAR ---- */
-let calDate = new Date();
+let calDate      = new Date();
 let selectedDate = null;
 let selectedTime = null;
 
-const takenSlots = { '15': ['10:00', '14:00'], '18': ['09:00', '15:30'], '20': ['11:00', '13:00', '16:00'] };
+const takenSlots = { '15': ['10:00','14:00'], '18': ['09:00','15:30'], '20': ['11:00','13:00','16:00'] };
 const allSlots   = ['09:00','10:00','10:30','11:00','12:00','13:00','14:00','14:30','15:00','15:30','16:00','17:00','18:00'];
 
 function renderCalendar() {
   const cal = document.getElementById('miniCal');
   if (!cal) return;
-  const year = calDate.getFullYear();
+  const year  = calDate.getFullYear();
   const month = calDate.getMonth();
   const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const days   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date();
+  const firstDay     = new Date(year, month, 1).getDay();
+  const daysInMonth  = new Date(year, month + 1, 0).getDate();
+  const today        = new Date();
 
   let html = `<div class="cal-header">
     <button id="calPrev">‹</button>
@@ -204,8 +205,8 @@ function renderCalendar() {
   const start = firstDay === 0 ? 6 : firstDay - 1;
   for (let i = 0; i < start; i++) html += `<div class="cal-day empty"></div>`;
   for (let d = 1; d <= daysInMonth; d++) {
-    const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    const isPast  = new Date(year, month, d) < new Date(today.toDateString());
+    const isToday    = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const isPast     = new Date(year, month, d) < new Date(today.toDateString());
     const isSelected = selectedDate && selectedDate.day === d && selectedDate.month === month && selectedDate.year === year;
     const cls = ['cal-day', isToday && 'today', isSelected && 'selected', isPast && 'disabled'].filter(Boolean).join(' ');
     html += `<div class="${cls}" data-day="${d}" data-month="${month}" data-year="${year}">${d}</div>`;
@@ -248,7 +249,7 @@ function goToStep(n) {
   document.querySelectorAll('.form-page').forEach((p, i) => p.classList.toggle('active', i === n - 1));
   document.querySelectorAll('.step').forEach((s, i) => {
     s.classList.remove('active', 'done');
-    if (i + 1 < n) s.classList.add('done');
+    if (i + 1 < n)      s.classList.add('done');
     else if (i + 1 === n) s.classList.add('active');
   });
   currentStep = n;
@@ -281,10 +282,10 @@ document.querySelectorAll('.prev-step').forEach(btn => {
 });
 
 function buildRecap() {
-  const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const months  = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   const service = document.querySelector('input[name="service"]:checked')?.value || '';
-  const date = selectedDate ? `${selectedDate.day} ${months[selectedDate.month]} ${selectedDate.year}` : '';
-  const recap = document.getElementById('recapBox');
+  const date    = selectedDate ? `${selectedDate.day} ${months[selectedDate.month]} ${selectedDate.year}` : '';
+  const recap   = document.getElementById('recapBox');
   recap.innerHTML = `
     <div class="recap-row"><span>Prestation</span><span>${service}</span></div>
     <div class="recap-row"><span>Date</span><span>${date} à ${selectedTime}</span></div>
@@ -294,37 +295,63 @@ function buildRecap() {
   `;
 }
 
-document.getElementById('orderForm').addEventListener('submit', e => {
+/* ---- SOUMISSION DU FORMULAIRE → API ---- */
+document.getElementById('orderForm').addEventListener('submit', async e => {
   e.preventDefault();
+
+  const submitBtn = e.target.querySelector('[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Envoi en cours…';
+
   const num = 'LN-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 900 + 100)).padStart(3, '0');
-  document.getElementById('trackingNum').textContent = num;
 
-  // Sauvegarder dans localStorage
-  const orders = JSON.parse(localStorage.getItem('luxnails_orders') || '[]');
-  orders.push({
+  const payload = {
     num,
-    name: `${document.querySelector('[name="prenom"]').value} ${document.querySelector('[name="nom"]').value}`,
-    service: document.querySelector('input[name="service"]:checked')?.value,
-    date: selectedDate, time: selectedTime,
-    email: document.querySelector('[name="email"]').value,
-    status: 'confirmed',
-    steps: [true, false, false, false],
-    timestamp: Date.now()
-  });
-  localStorage.setItem('luxnails_orders', JSON.stringify(orders));
+    name:        `${document.querySelector('[name="prenom"]').value.trim()} ${document.querySelector('[name="nom"]').value.trim()}`,
+    service:     document.querySelector('input[name="service"]:checked')?.value,
+    date:        selectedDate,
+    time:        selectedTime,
+    email:       document.querySelector('[name="email"]').value.trim(),
+    phone:       document.querySelector('[name="tel"]').value.trim(),
+    model_notes: document.querySelector('[name="modele"]').value.trim(),
+    message:     document.querySelector('[name="message"]').value.trim(),
+  };
 
-  document.getElementById('orderForm').style.display = 'none';
-  document.getElementById('orderSuccess').style.display = 'block';
-  showToast('Réservation confirmée ! 🎉', 'success');
+  try {
+    const res = await fetch(`${API}/api/orders`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    document.getElementById('trackingNum').textContent = data.num;
+    document.getElementById('orderForm').style.display = 'none';
+    document.getElementById('orderSuccess').style.display = 'block';
+    showToast('Réservation confirmée ! 🎉', 'success');
+  } catch (err) {
+    showToast(`Erreur : ${err.message}`, 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Confirmer la réservation ✓';
+  }
 });
 
-/* ---- TRACKING ---- */
-const demoOrders = {
-  'LN-2024-001': { name: 'Sophie M.', service: 'Nail Art Premium (55€)', date: '20 Jan 2024', time: '14:00', status: 'ready', steps: [true, true, true, false], statusLabel: 'Prêt à récupérer' },
-  'LN-2024-002': { name: 'Camille L.', service: 'Pose Gel (35€)', date: '22 Jan 2024', time: '10:30', status: 'preparing', steps: [true, true, false, false], statusLabel: 'En cours de préparation' },
-  'LN-2024-003': { name: 'Julie R.', service: 'Extensions Acrylique (65€)', date: '18 Jan 2024', time: '16:00', status: 'completed', steps: [true, true, true, true], statusLabel: 'Terminé' },
-};
+/* ---- NOUVELLE RÉSERVATION ---- */
+document.getElementById('newReservation').addEventListener('click', () => {
+  document.getElementById('orderForm').reset();
+  document.getElementById('orderForm').style.display = 'block';
+  document.getElementById('orderSuccess').style.display = 'none';
+  selectedDate = null;
+  selectedTime = null;
+  const submitBtn = document.querySelector('#orderForm [type="submit"]');
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Confirmer la réservation ✓';
+  goToStep(1);
+});
 
+/* ---- SUIVI DE COMMANDE → API ---- */
 const stepLabels = [
   { icon: '✅', label: 'Confirmé' },
   { icon: '🔄', label: 'En préparation' },
@@ -332,28 +359,54 @@ const stepLabels = [
   { icon: '🎉', label: 'Terminé' }
 ];
 
-function searchOrder(num) {
+async function searchOrder(num) {
   num = num.trim().toUpperCase();
-  const localOrders = JSON.parse(localStorage.getItem('luxnails_orders') || '[]');
-  let order = localOrders.find(o => o.num === num);
-  if (!order) order = demoOrders[num];
+  if (!num) return;
 
   const resultEl = document.getElementById('trackResult');
-  if (!order) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--pink)"><p style="font-size:2rem">🔍</p><p>Numéro de commande introuvable.</p><p style="font-size:0.85rem;color:var(--text-light);margin-top:0.5rem">Vérifiez le numéro envoyé par email.</p></div>`;
-    return;
-  }
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `<div style="text-align:center;padding:2rem">
+    <p style="font-size:2rem;animation:float 1s ease-in-out infinite">⏳</p>
+    <p>Recherche en cours…</p>
+  </div>`;
 
-  const badgeClass = { confirmed:'badge-confirmed', preparing:'badge-preparing', ready:'badge-ready', completed:'badge-completed' }[order.status] || 'badge-confirmed';
-  const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  let dateStr = order.date;
-  if (order.date && typeof order.date === 'object') {
-    dateStr = `${order.date.day} ${months[order.date.month]} ${order.date.year}`;
+  try {
+    const res = await fetch(`${API}/api/orders/${encodeURIComponent(num)}`);
+
+    if (res.status === 404) {
+      resultEl.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--pink)">
+        <p style="font-size:2rem">🔍</p>
+        <p>Numéro de commande introuvable.</p>
+        <p style="font-size:0.85rem;color:var(--text-light);margin-top:0.5rem">Vérifiez le numéro envoyé par email.</p>
+      </div>`;
+      return;
+    }
+    if (!res.ok) throw new Error('Erreur serveur');
+
+    const order = await res.json();
+    renderTrackResult(resultEl, num, order);
+  } catch (err) {
+    resultEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#f44336">
+      <p style="font-size:2rem">⚠️</p>
+      <p>Impossible de contacter le serveur.</p>
+      <p style="font-size:0.85rem;margin-top:0.5rem">${err.message}</p>
+    </div>`;
   }
+}
+
+function renderTrackResult(resultEl, num, order) {
+  const badgeClass = {
+    confirmed:  'badge-confirmed',
+    preparing:  'badge-preparing',
+    ready:      'badge-ready',
+    completed:  'badge-completed'
+  }[order.status] || 'badge-confirmed';
+
+  const MONTHS   = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  let dateStr    = order.date ? `${order.date.day} ${MONTHS[order.date.month]} ${order.date.year}` : '—';
 
   const stepsHTML = stepLabels.map((s, i) => {
-    const done = order.steps[i];
+    const done    = order.steps[i];
     const current = done && (i === order.steps.lastIndexOf(true));
     return `<div class="track-step ${done ? 'done' : ''} ${current ? 'current' : ''}">
       <div class="ts-circle">${done ? s.icon : ''}</div>
@@ -361,7 +414,6 @@ function searchOrder(num) {
     </div>`;
   }).join('');
 
-  resultEl.style.display = 'block';
   resultEl.innerHTML = `
     <div class="track-header">
       <div><h4>${order.name}</h4><p>${order.service}</p></div>
@@ -371,7 +423,7 @@ function searchOrder(num) {
     <div class="track-details">
       <table>
         <tr><td>Numéro</td><td><strong>${num}</strong></td></tr>
-        <tr><td>Date RDV</td><td>${dateStr} à ${order.time}</td></tr>
+        <tr><td>Date RDV</td><td>${dateStr} à ${order.time || '—'}</td></tr>
         <tr><td>Prestation</td><td>${order.service}</td></tr>
         <tr><td>Email</td><td>${order.email || '—'}</td></tr>
       </table>
@@ -387,23 +439,34 @@ document.querySelectorAll('.demo-num').forEach(btn => {
   });
 });
 
-/* ---- REVIEWS ---- */
-const defaultReviews = [
-  { name: 'Sophie M.', service: 'Nail Art Premium', rating: 5, text: 'Absolument époustouflant ! Mes ongles sont devenus de vraies œuvres d\'art. L\'accueil est chaleureux et le résultat dépasse toutes mes attentes.', date: 'Il y a 2 jours' },
-  { name: 'Camille L.', service: 'Pose Gel', rating: 5, text: 'Ma première pose gel ici et je suis conquise ! Tenue parfaite après 3 semaines, brillance incroyable. Je reviens sans hésiter.', date: 'Il y a 5 jours' },
-  { name: 'Julie R.', service: 'Extensions Acrylique', rating: 5, text: 'Je cherchais des extensions naturelles et c\'est exactement ce que j\'ai eu. Technique impeccable, résultat magnifique et très confortable.', date: 'Il y a 1 semaine' },
-  { name: 'Marie T.', service: 'Formation', rating: 5, text: 'La formation est très complète et bien expliquée. En quelques heures, j\'ai appris des techniques que je pensais impossibles. Merci infiniment !', date: 'Il y a 2 semaines' },
-  { name: 'Léa D.', service: 'French Manucure', rating: 4, text: 'Très satisfaite de ma French manucure. Propre, élégante, exactement ce que je voulais. Je recommande à toutes mes amies.', date: 'Il y a 3 semaines' },
-  { name: 'Emma B.', service: 'Nail Art Floral', rating: 5, text: 'Je voulais quelque chose d\'unique pour mon mariage et j\'ai été gâtée ! Motifs floraux exquis, un vrai travail d\'artiste. Merci LuxNails !', date: 'Il y a 1 mois' },
-];
-
-let allReviews = [...defaultReviews, ...JSON.parse(localStorage.getItem('luxnails_reviews') || '[]')];
-let reviewOffset = 0;
+/* ---- AVIS → API ---- */
+let allReviews    = [];
+let reviewOffset  = 0;
 const reviewsPerPage = 3;
+
+async function loadReviews() {
+  try {
+    const res  = await fetch(`${API}/api/reviews`);
+    if (!res.ok) throw new Error('Erreur serveur');
+    allReviews = await res.json();
+  } catch {
+    // Fallback silencieux si le serveur n'est pas joignable
+    allReviews = [];
+  }
+  renderReviews();
+}
 
 function renderReviews() {
   const track = document.getElementById('reviewsTrack');
-  track.innerHTML = allReviews.slice(reviewOffset, reviewOffset + reviewsPerPage).map(r => `
+  const slice = allReviews.slice(reviewOffset, reviewOffset + reviewsPerPage);
+
+  if (slice.length === 0) {
+    track.innerHTML = `<div style="color:rgba(255,255,255,0.5);padding:2rem;text-align:center">Aucun avis pour l'instant.</div>`;
+    document.getElementById('reviewDots').innerHTML = '';
+    return;
+  }
+
+  track.innerHTML = slice.map(r => `
     <div class="review-card">
       <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
       <p class="review-text">"${r.text}"</p>
@@ -419,9 +482,9 @@ function renderReviews() {
 }
 
 function renderDots() {
-  const total = Math.ceil(allReviews.length / reviewsPerPage);
+  const total   = Math.ceil(allReviews.length / reviewsPerPage);
   const current = Math.floor(reviewOffset / reviewsPerPage);
-  document.getElementById('reviewDots').innerHTML = Array.from({length: total}, (_, i) =>
+  document.getElementById('reviewDots').innerHTML = Array.from({ length: total }, (_, i) =>
     `<div class="review-dot ${i === current ? 'active' : ''}" data-i="${i}"></div>`
   ).join('');
   document.querySelectorAll('.review-dot').forEach(dot => {
@@ -438,8 +501,6 @@ document.getElementById('revNext').onclick = () => {
   renderReviews();
 };
 
-renderReviews();
-
 /* STAR RATING */
 let selectedRating = 5;
 document.querySelectorAll('#starSelect span').forEach(star => {
@@ -452,32 +513,117 @@ document.querySelectorAll('#starSelect span').forEach(star => {
   });
 });
 document.querySelectorAll('#starSelect span').forEach((s, i) => { if (i < 5) s.classList.add('active'); });
-
-document.getElementById('reviewForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const form = e.target;
-  const review = {
-    name: form.reviewer.value.trim(),
-    service: 'Cliente LuxNails',
-    rating: selectedRating,
-    text: form.comment.value.trim(),
-    date: "À l'instant"
-  };
-  allReviews = [review, ...allReviews];
-  const saved = JSON.parse(localStorage.getItem('luxnails_reviews') || '[]');
-  saved.unshift(review);
-  localStorage.setItem('luxnails_reviews', JSON.stringify(saved));
-  reviewOffset = 0;
-  renderReviews();
-  form.reset();
-  showToast('Merci pour votre avis ! ⭐', 'success');
+document.getElementById('starSelect').addEventListener('mouseleave', () => {
+  document.querySelectorAll('#starSelect span').forEach((s, i) => s.classList.toggle('active', i < selectedRating));
 });
 
-/* ---- CONTACT FORM ---- */
-document.getElementById('contactForm').addEventListener('submit', e => {
+/* SOUMETTRE UN AVIS → API */
+document.getElementById('reviewForm').addEventListener('submit', async e => {
   e.preventDefault();
-  showToast('Message envoyé avec succès ! Nous vous répondrons rapidement.', 'success');
-  e.target.reset();
+  const form       = e.target;
+  const submitBtn  = form.querySelector('[type="submit"]');
+  submitBtn.disabled  = true;
+  submitBtn.textContent = 'Publication…';
+
+  const payload = {
+    name:    form.reviewer.value.trim(),
+    service: 'Cliente LuxNails',
+    rating:  selectedRating,
+    text:    form.comment.value.trim()
+  };
+
+  try {
+    const res  = await fetch(`${API}/api/reviews`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    allReviews = [data.review, ...allReviews];
+    reviewOffset = 0;
+    renderReviews();
+    form.reset();
+    selectedRating = 5;
+    document.querySelectorAll('#starSelect span').forEach((s, i) => s.classList.toggle('active', i < 5));
+    showToast('Merci pour votre avis ! ⭐', 'success');
+  } catch (err) {
+    showToast(`Erreur : ${err.message}`, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Publier mon avis';
+  }
+});
+
+/* ---- FORMULAIRE CONTACT → API ---- */
+document.getElementById('contactForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const form      = e.target;
+  const submitBtn = form.querySelector('[type="submit"]');
+  submitBtn.disabled  = true;
+  submitBtn.textContent = 'Envoi…';
+
+  const payload = {
+    name:  form.name.value.trim(),
+    email: form.email.value.trim(),
+    sujet: form.sujet.value,
+    msg:   form.msg.value.trim()
+  };
+
+  try {
+    const res  = await fetch(`${API}/api/contact`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    showToast('Message envoyé ! Nous vous répondrons rapidement. 📩', 'success');
+    form.reset();
+  } catch (err) {
+    showToast(`Erreur : ${err.message}`, 'error');
+  } finally {
+    submitBtn.disabled  = false;
+    submitBtn.textContent = 'Envoyer le message';
+  }
+});
+
+/* ---- NEWSLETTER → API ---- */
+document.getElementById('newsletterBtn').addEventListener('click', async () => {
+  const input = document.getElementById('newsletterEmail');
+  const email = input.value.trim();
+
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    showToast('Veuillez entrer une adresse email valide', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('newsletterBtn');
+  btn.disabled  = true;
+  btn.textContent = '…';
+
+  try {
+    const res  = await fetch(`${API}/api/newsletter`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    showToast('Merci ! Vous êtes inscrit(e) à notre newsletter 🎉', 'success');
+    input.value = '';
+  } catch (err) {
+    showToast(`Erreur : ${err.message}`, 'error');
+  } finally {
+    btn.disabled  = false;
+    btn.textContent = 'OK';
+  }
+});
+document.getElementById('newsletterEmail').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('newsletterBtn').click();
 });
 
 /* ---- TOAST ---- */
@@ -497,3 +643,8 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
   });
 });
+
+/* ==========================================
+   INITIALISATION ASYNCHRONE
+   ========================================== */
+loadReviews();

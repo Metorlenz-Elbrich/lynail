@@ -360,7 +360,10 @@
         <h3>Réservation confirmée !</h3>
         <p>Votre numéro de suivi : <strong id="trackingNum"></strong></p>
         <p>Un email de confirmation vous a été envoyé.</p>
-        <a href="#suivi" class="btn btn-primary">Suivre ma commande</a>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">
+          <a href="#suivi" class="btn btn-primary">Suivre ma commande</a>
+          <button type="button" class="btn btn-outline" id="newReservation" style="color:var(--pink);border-color:var(--pink)">Nouvelle réservation</button>
+        </div>
       </div>
     </div>
   </div>
@@ -538,8 +541,8 @@
       <h4>Newsletter</h4>
       <p>Recevez nos offres exclusives</p>
       <div class="newsletter">
-        <input type="email" placeholder="votre@email.fr">
-        <button class="btn btn-primary">OK</button>
+        <input type="email" id="newsletterEmail" placeholder="votre@email.fr">
+        <button class="btn btn-primary" id="newsletterBtn">OK</button>
       </div>
     </div>
   </div>
