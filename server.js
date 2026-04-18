@@ -543,8 +543,22 @@ app.post('/api/admin/services', adminAuth, async (req, res) => {
 app.put('/api/admin/services/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  const { icon, title, description, price, featured } = req.body;
+  const updates = {};
+  if (icon  !== undefined) updates.icon  = String(icon).trim().slice(0, 4) || '💅';
+  if (title !== undefined) {
+    if (!String(title).trim() || String(title).length > 100) return res.status(400).json({ error: 'Titre invalide.' });
+    updates.title = title.trim();
+  }
+  if (description !== undefined) updates.description = String(description).trim().slice(0, 500);
+  if (price !== undefined) {
+    if (!String(price).trim() || String(price).length > 50) return res.status(400).json({ error: 'Prix invalide.' });
+    updates.price = price.trim();
+  }
+  if (featured !== undefined) updates.featured = !!featured;
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à modifier.' });
   try {
-    await db.updateService(oid, req.body);
+    await db.updateService(oid, updates);
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin/Services] Update :', err.message);
@@ -610,8 +624,40 @@ app.post('/api/admin/tutorials', adminAuth, uploadMedia.single('video'), async (
 app.put('/api/admin/tutorials/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  const { title, shortDesc, description, level, duration, videoUrl } = req.body;
+  const allowedLevels = new Set(['Débutant', 'Intermédiaire', 'Avancé']);
+  const updates = {};
+  if (title !== undefined) {
+    if (!String(title).trim() || String(title).length > 200) return res.status(400).json({ error: 'Titre invalide.' });
+    updates.title = title.trim();
+  }
+  if (shortDesc   !== undefined) updates.shortDesc   = String(shortDesc).trim().slice(0, 300);
+  if (description !== undefined) updates.description = String(description).trim().slice(0, 2000);
+  if (level !== undefined) {
+    if (!allowedLevels.has(level)) return res.status(400).json({ error: 'Niveau invalide.' });
+    updates.level = level;
+  }
+  if (duration !== undefined) updates.duration = String(duration).trim().slice(0, 20);
+  if (videoUrl !== undefined) {
+    if (videoUrl.trim()) {
+      try {
+        const u = new URL(videoUrl.trim());
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
+        updates.videoUrl = videoUrl.trim();
+      } catch { return res.status(400).json({ error: 'URL vidéo invalide.' }); }
+    } else {
+      /* L'admin efface la vidéo : nettoyer le fichier GridFS si uploadé */
+      const current = await db.getTutorial(oid);
+      if (current?.videoUrl?.startsWith('/api/videos/')) {
+        const vidOid = toObjectId(current.videoUrl.replace('/api/videos/', ''));
+        if (vidOid) await db.deleteVideo(vidOid).catch(() => {});
+      }
+      updates.videoUrl = '';
+    }
+  }
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à modifier.' });
   try {
-    await db.updateTutorial(oid, req.body);
+    await db.updateTutorial(oid, updates);
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin/Tutorials] Update :', err.message);
@@ -660,8 +706,20 @@ app.post('/api/admin/prestations', adminAuth, async (req, res) => {
 app.put('/api/admin/prestations/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  const { icon, name, price } = req.body;
+  const updates = {};
+  if (icon  !== undefined) updates.icon  = String(icon).trim().slice(0, 4) || '💅';
+  if (name  !== undefined) {
+    if (!String(name).trim() || String(name).length > 100) return res.status(400).json({ error: 'Nom invalide.' });
+    updates.name = name.trim();
+  }
+  if (price !== undefined) {
+    if (!String(price).trim() || String(price).length > 50) return res.status(400).json({ error: 'Prix invalide.' });
+    updates.price = price.trim();
+  }
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à modifier.' });
   try {
-    await db.updatePrestation(oid, req.body);
+    await db.updatePrestation(oid, updates);
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin/Prestations] Update :', err.message);
@@ -677,6 +735,125 @@ app.delete('/api/admin/prestations/:id', adminAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin/Prestations] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   GALLERY CATEGORIES — public + admin CRUD
+   ========================================== */
+
+const GRADIENT_PRESETS = new Set([
+  'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
+  'linear-gradient(135deg,#c471f5,#fa71cd)',
+  'linear-gradient(135deg,#f7971e,#ffd200)',
+  'linear-gradient(135deg,#d4fc79,#96e6a1)',
+  'linear-gradient(135deg,#f8f9fa,#e9ecef)',
+  'linear-gradient(135deg,#667eea,#764ba2)',
+  'linear-gradient(135deg,#ff9a9e,#fad0c4)',
+  'linear-gradient(135deg,#2c3e50,#3498db)',
+  'linear-gradient(135deg,#f6d365,#fda085)',
+  'linear-gradient(135deg,#e0c3fc,#8ec5fc)',
+  'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
+  'linear-gradient(135deg,#fccb90,#d57eeb)',
+]);
+
+function slugify(str) {
+  return str.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+app.get('/api/gallery/categories', async (_req, res) => {
+  try { res.json(await db.getGalleryCategories()); }
+  catch { res.status(500).json({ error: 'Erreur serveur.' }); }
+});
+
+app.post('/api/admin/gallery/categories', adminAuth, async (req, res) => {
+  const { label, gradient } = req.body;
+  if (!label?.trim() || label.length > 60) return res.status(400).json({ error: 'Label invalide (1–60 car.).' });
+  if (!gradient || !GRADIENT_PRESETS.has(gradient)) return res.status(400).json({ error: 'Dégradé invalide.' });
+  const slug = slugify(label);
+  if (!slug) return res.status(400).json({ error: 'Label ne peut pas former un identifiant.' });
+  try {
+    const existing = (await db.getGalleryCategories()).find(c => c.slug === slug);
+    if (existing) return res.status(409).json({ error: 'Une catégorie avec ce nom existe déjà.' });
+    const cat = await db.insertGalleryCategory({ slug, label: label.trim(), gradient });
+    res.status(201).json(cat);
+  } catch (err) {
+    console.error('[Admin/GalCats] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.put('/api/admin/gallery/categories/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  const { label, gradient } = req.body;
+  const updates = {};
+  if (label !== undefined) {
+    if (!label.trim() || label.length > 60) return res.status(400).json({ error: 'Label invalide.' });
+    const slug = slugify(label);
+    if (!slug) return res.status(400).json({ error: 'Label invalide.' });
+    updates.label = label.trim();
+    updates.slug  = slug;
+  }
+  if (gradient !== undefined) {
+    if (!GRADIENT_PRESETS.has(gradient)) return res.status(400).json({ error: 'Dégradé invalide.' });
+    updates.gradient = gradient;
+  }
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à modifier.' });
+  try {
+    await db.updateGalleryCategory(oid, updates);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/GalCats] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/gallery/categories/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.deleteGalleryCategory(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/GalCats] Delete :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   ADMIN — Avis (reviews)
+   ========================================== */
+
+app.get('/api/admin/reviews', adminAuth, async (_req, res) => {
+  try {
+    const reviews = await db.getAllReviews();
+    res.json(reviews.map(r => ({
+      _id:     r._id,
+      name:    r.name,
+      service: r.service,
+      rating:  r.rating,
+      text:    r.text,
+      approved: r.approved,
+      created_at: r.created_at,
+    })));
+  } catch (err) {
+    console.error('[Admin/Reviews] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.delete('/api/admin/reviews/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+  try {
+    await db.deleteReview(oid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Reviews] Delete :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });

@@ -247,6 +247,51 @@
     .status-completed  { background: #f3e5f5; color: #6a1b9a; }
     .status-cancelled  { background: #fbe9e7; color: #bf360c; }
 
+    /* ── Edit button ── */
+    .btn-edit {
+      background: none; border: 1.5px solid #bbdefb; color: var(--info);
+      border-radius: 8px; padding: 0.4rem 0.75rem; cursor: pointer;
+      font-family: inherit; font-size: 0.8rem; font-weight: 600;
+      transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-edit:hover { background: var(--info); color: #fff; border-color: var(--info); }
+
+    /* ── Gradient swatches ── */
+    .gradient-swatches { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.25rem; }
+    .gradient-swatch {
+      width:36px; height:36px; border-radius:8px; cursor:pointer;
+      border:3px solid transparent; transition:border-color 0.15s, transform 0.15s; flex-shrink:0;
+    }
+    .gradient-swatch:hover { transform:scale(1.1); }
+    .gradient-swatch.selected { border-color:var(--pink); transform:scale(1.1); box-shadow:0 0 0 1px #fff inset; }
+
+    /* ── Generic edit overlay ── */
+    .edit-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.5); z-index:500;
+      align-items:center; justify-content:center;
+    }
+    .edit-overlay.open { display:flex; }
+    .edit-box {
+      background:var(--white); border-radius:16px; padding:1.75rem;
+      width:90%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+      max-height:90vh; overflow-y:auto;
+    }
+    .edit-box h3 { font-size:1rem; color:var(--pink); margin-bottom:1.25rem; }
+
+    /* ── Review card ── */
+    .review-card {
+      background:var(--white); border-radius:var(--radius); padding:1.1rem 1.25rem;
+      border:1px solid var(--border); box-shadow:0 1px 8px rgba(0,0,0,0.06);
+      display:flex; gap:1rem; align-items:flex-start;
+    }
+    .review-body { flex:1; min-width:0; }
+    .review-name { font-weight:600; font-size:0.9rem; margin-bottom:0.2rem; }
+    .review-stars { color:#f59e0b; font-size:0.85rem; margin-bottom:0.25rem; }
+    .review-text { font-size:0.83rem; color:var(--text); line-height:1.5; }
+    .review-meta { font-size:0.75rem; color:var(--text-light); margin-top:0.3rem; }
+    .review-pending { font-size:0.72rem; background:#fff3cd; color:#856404; border-radius:50px; padding:0.2rem 0.6rem; font-weight:600; }
+
     /* ── Buttons ── */
     .btn-add {
       background: linear-gradient(135deg, var(--pink), var(--pink-light));
@@ -339,6 +384,7 @@
     <button class="tab-btn" data-tab="tutorials">🎬 Tutorat</button>
     <button class="tab-btn" data-tab="prestations">📋 Prestations</button>
     <button class="tab-btn" data-tab="orders">📦 Commandes</button>
+    <button class="tab-btn" data-tab="avis">⭐ Avis</button>
   </div>
 
   <!-- ── GALERIE ── -->
@@ -383,6 +429,24 @@
       <button class="btn-bulk-del" id="g-bulk-del" disabled>🗑 Supprimer la sélection <span id="g-bulk-count"></span></button>
     </div>
     <div class="gallery-preview" id="galleryPreview"></div>
+
+    <div class="panel-title" style="margin-top:2.5rem;font-size:1.1rem;border-top:2px solid var(--border);padding-top:1.5rem">🏷 Catégories de galerie</div>
+    <div class="add-card">
+      <h3>+ Nouvelle catégorie</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom *</label>
+          <input type="text" id="cat-label" placeholder="Ex : Stamping" maxlength="60">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Couleur / dégradé</label>
+          <div class="gradient-swatches" id="catGradientPicker"></div>
+          <input type="hidden" id="cat-gradient" value="linear-gradient(135deg,#fbc2eb,#a6c1ee)">
+        </div>
+      </div>
+      <button class="btn-add" id="cat-submit">Créer la catégorie</button>
+    </div>
+    <div class="items-list" id="categoriesList"></div>
   </div>
 
   <!-- ── SERVICES ── -->
@@ -522,6 +586,13 @@
     <div id="ordersCount" style="font-size:0.82rem;color:var(--text-light);margin-bottom:1rem"></div>
     <div id="ordersList"></div>
   </div>
+  <!-- ── AVIS ── -->
+  <div class="tab-panel" id="tab-avis">
+    <div class="panel-title">⭐ Témoignages clients</div>
+    <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:1.25rem">Tous les avis soumis (approuvés et en attente). Supprimez ceux que vous souhaitez retirer.</p>
+    <div style="margin-bottom:1.25rem"><button class="btn-secondary" id="avisRefresh">↻ Actualiser</button></div>
+    <div class="items-list" id="reviewsList"></div>
+  </div>
 </div><!-- fin #dashboard -->
 
 <!-- ========== GALLERY EDIT MODAL ========== -->
@@ -546,6 +617,135 @@
     <div style="display:flex;gap:0.75rem;justify-content:flex-end">
       <button class="btn-secondary" id="edit-g-cancel">Annuler</button>
       <button class="btn-add" id="edit-g-save" style="margin-top:0">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SERVICE EDIT MODAL ========== -->
+<div id="serviceEditModal" class="edit-overlay">
+  <div class="edit-box">
+    <h3>✏ Modifier le service</h3>
+    <input type="hidden" id="edit-s-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Icône</label>
+        <input type="text" id="edit-s-icon" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label>Titre *</label>
+        <input type="text" id="edit-s-title" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Prix *</label>
+        <input type="text" id="edit-s-price" maxlength="50">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Description</label>
+        <textarea id="edit-s-desc" style="min-height:80px"></textarea>
+      </div>
+      <div class="check-group">
+        <input type="checkbox" id="edit-s-featured">
+        <label for="edit-s-featured">Marquer comme "Populaire"</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn-secondary" id="edit-s-cancel">Annuler</button>
+      <button class="btn-add" id="edit-s-save" style="margin-top:0">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PRESTATION EDIT MODAL ========== -->
+<div id="prestEditModal" class="edit-overlay">
+  <div class="edit-box">
+    <h3>✏ Modifier la prestation</h3>
+    <input type="hidden" id="edit-p-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Icône</label>
+        <input type="text" id="edit-p-icon" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" id="edit-p-name" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Prix *</label>
+        <input type="text" id="edit-p-price" maxlength="50">
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn-secondary" id="edit-p-cancel">Annuler</button>
+      <button class="btn-add" id="edit-p-save" style="margin-top:0">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TUTORIAL EDIT MODAL ========== -->
+<div id="tutoEditModal" class="edit-overlay">
+  <div class="edit-box">
+    <h3>✏ Modifier le tutoriel</h3>
+    <input type="hidden" id="edit-t-id">
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Titre *</label>
+        <input type="text" id="edit-t-title" maxlength="200">
+      </div>
+      <div class="form-group">
+        <label>Niveau</label>
+        <select id="edit-t-level">
+          <option value="Débutant">Débutant</option>
+          <option value="Intermédiaire">Intermédiaire</option>
+          <option value="Avancé">Avancé</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Durée</label>
+        <input type="text" id="edit-t-duration" maxlength="50">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Description courte</label>
+        <input type="text" id="edit-t-short" maxlength="200">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Description complète</label>
+        <textarea id="edit-t-desc" style="min-height:80px"></textarea>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Lien YouTube (laisser vide pour garder l'actuel)</label>
+        <input type="url" id="edit-t-video" placeholder="https://www.youtube.com/...">
+        <p class="input-hint" id="edit-t-video-hint"></p>
+        <label id="edit-t-clear-wrap" style="display:none;margin-top:0.4rem;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem">
+          <input type="checkbox" id="edit-t-clear-video"> Supprimer la vidéo uploadée
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn-secondary" id="edit-t-cancel">Annuler</button>
+      <button class="btn-add" id="edit-t-save" style="margin-top:0">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CATEGORY EDIT MODAL ========== -->
+<div id="catEditModal" class="edit-overlay">
+  <div class="edit-box">
+    <h3>✏ Modifier la catégorie</h3>
+    <input type="hidden" id="edit-cat-id">
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nom *</label>
+        <input type="text" id="edit-cat-label" maxlength="60">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Couleur / dégradé</label>
+        <div class="gradient-swatches" id="editCatGradientPicker"></div>
+        <input type="hidden" id="edit-cat-gradient">
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn-secondary" id="edit-cat-cancel">Annuler</button>
+      <button class="btn-add" id="edit-cat-save" style="margin-top:0">Sauvegarder</button>
     </div>
   </div>
 </div>

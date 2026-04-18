@@ -48,6 +48,12 @@ const db = {
     await col.insertOne(row);
     return row;
   },
+  async getAllReviews() {
+    return (await connect()).collection('reviews').find().sort({ created_at: -1 }).toArray();
+  },
+  async deleteReview(oid) {
+    return (await connect()).collection('reviews').deleteOne({ _id: oid });
+  },
 
   /* ── Contact ── */
   async insertContact(contact) {
@@ -82,6 +88,25 @@ const db = {
   },
   async deleteGalleryItem(oid) {
     return (await connect()).collection('gallery').deleteOne({ _id: oid });
+  },
+
+  /* ── Gallery Categories ── */
+  async getGalleryCategories() {
+    return (await connect()).collection('gallery_categories').find().sort({ order: 1 }).toArray();
+  },
+  async insertGalleryCategory(cat) {
+    const col = (await connect()).collection('gallery_categories');
+    const count = await col.countDocuments();
+    const row = { ...cat, order: count, created_at: new Date() };
+    await col.insertOne(row);
+    return row;
+  },
+  async updateGalleryCategory(oid, updates) {
+    delete updates._id;
+    return (await connect()).collection('gallery_categories').updateOne({ _id: oid }, { $set: updates });
+  },
+  async deleteGalleryCategory(oid) {
+    return (await connect()).collection('gallery_categories').deleteOne({ _id: oid });
   },
 
   /* ── Images (stockage binaire MongoDB — pas de filesystem) ── */
@@ -269,6 +294,18 @@ async function seed(database) {
       { icon:'🌸', name:'Soin Naturel',          price:'40$ CAD',  order:3, created_at: new Date() },
       { icon:'💅', name:'French Manucure',       price:'60$ CAD',  order:4, created_at: new Date() },
       { icon:'🎓', name:'Formation',             price:'120$ CAD', order:5, created_at: new Date() },
+    ]);
+  }
+
+  /* ── Gallery categories ── */
+  const galCats = database.collection('gallery_categories');
+  if (await galCats.countDocuments() === 0) {
+    await galCats.insertMany([
+      { slug:'gel',       label:'Pose Gel',   gradient:'linear-gradient(135deg,#fbc2eb,#a6c1ee)', order:0, created_at: new Date() },
+      { slug:'nail-art',  label:'Nail Art',   gradient:'linear-gradient(135deg,#c471f5,#fa71cd)', order:1, created_at: new Date() },
+      { slug:'acrylique', label:'Acrylique',  gradient:'linear-gradient(135deg,#f7971e,#ffd200)', order:2, created_at: new Date() },
+      { slug:'naturel',   label:'Naturel',    gradient:'linear-gradient(135deg,#d4fc79,#96e6a1)', order:3, created_at: new Date() },
+      { slug:'french',    label:'French',     gradient:'linear-gradient(135deg,#f8f9fa,#e9ecef)', order:4, created_at: new Date() },
     ]);
   }
 }

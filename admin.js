@@ -5,6 +5,57 @@
 const API = '';
 let TOKEN = sessionStorage.getItem('admin_token') || '';
 
+let servicesCache    = [];
+let tutorialsCache   = [];
+let prestationsCache = [];
+let categoriesCache  = [];
+
+const GRADIENT_PRESETS = [
+  'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
+  'linear-gradient(135deg,#c471f5,#fa71cd)',
+  'linear-gradient(135deg,#f7971e,#ffd200)',
+  'linear-gradient(135deg,#d4fc79,#96e6a1)',
+  'linear-gradient(135deg,#f8f9fa,#e9ecef)',
+  'linear-gradient(135deg,#667eea,#764ba2)',
+  'linear-gradient(135deg,#f093fb,#f5576c)',
+  'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'linear-gradient(135deg,#fa709a,#fee140)',
+  'linear-gradient(135deg,#30cfd0,#330867)',
+  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+];
+
+function buildGradientPicker(containerId, hiddenInputId, initial) {
+  const container = document.getElementById(containerId);
+  const hidden    = document.getElementById(hiddenInputId);
+  if (!container || !hidden) return;
+  container.innerHTML = '';
+  const sel = GRADIENT_PRESETS.includes(initial) ? initial : GRADIENT_PRESETS[0];
+  hidden.value = sel;
+  GRADIENT_PRESETS.forEach(g => {
+    const sw = document.createElement('div');
+    sw.className = 'gradient-swatch' + (g === sel ? ' selected' : '');
+    sw.style.background = g;
+    sw.title = g;
+    sw.addEventListener('click', () => {
+      container.querySelectorAll('.gradient-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      hidden.value = g;
+    });
+    container.appendChild(sw);
+  });
+}
+
+function populateCategorySelects(cats) {
+  ['g-cat', 'edit-g-cat'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = cats.map(c => `<option value="${esc(c.slug)}">${esc(c.label)}</option>`).join('');
+    if (cur) sel.value = cur;
+  });
+}
+
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -19,6 +70,8 @@ function showToast(msg, type = 'success') {
 }
 
 function categoryLabel(c) {
+  const found = categoriesCache.find(cat => cat.slug === c);
+  if (found) return found.label;
   const m = { gel:'Pose Gel','nail-art':'Nail Art',acrylique:'Acrylique',naturel:'Naturel',french:'French' };
   return m[c] || c;
 }
@@ -97,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  function loadAllData() { loadGallery(); loadServices(); loadTutorials(); loadPrestations(); loadOrders(); }
+  function loadAllData() { loadGallery(); loadServices(); loadTutorials(); loadPrestations(); loadOrders(); loadCategories(); loadReviews(); }
 
   /* ==========================================
      GALERIE — ajout
@@ -236,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderServices(services) {
+    servicesCache = services;
     const list = document.getElementById('servicesList');
     if (!services.length) { list.innerHTML = '<p class="empty-state">Aucun service.</p>'; updateBulkBar('s'); return; }
     list.innerHTML = services.map(s => `
@@ -245,9 +299,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="item-info"><strong>${esc(s.title)}</strong><small>${esc(s.description)}</small></div>
         ${s.featured ? '<span class="item-badge featured">⭐ Populaire</span>' : ''}
         <span class="item-badge">${esc(s.price)}</span>
+        <button class="btn-edit" data-id="${esc(String(s._id))}">✏ Modifier</button>
         <button class="btn-del" data-id="${esc(String(s._id))}">Supprimer</button>
       </div>`).join('');
     list.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteService(b.dataset.id)));
+    list.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
+      const s = servicesCache.find(x => String(x._id) === b.dataset.id);
+      if (s) openServiceEdit(s);
+    }));
     list.querySelectorAll('.item-check').forEach(cb => cb.addEventListener('change', () => updateBulkBar('s')));
     updateBulkBar('s');
   }
@@ -281,6 +340,44 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { showToast(e.message||'Erreur','error'); }
   }
 
+  /* ── Service edit modal ── */
+  const serviceEditModal = document.getElementById('serviceEditModal');
+  document.getElementById('edit-s-cancel').addEventListener('click', () => serviceEditModal.classList.remove('open'));
+  serviceEditModal.addEventListener('click', e => { if (e.target === serviceEditModal) serviceEditModal.classList.remove('open'); });
+
+  function openServiceEdit(s) {
+    document.getElementById('edit-s-id').value      = String(s._id);
+    document.getElementById('edit-s-icon').value    = s.icon || '';
+    document.getElementById('edit-s-title').value   = s.title || '';
+    document.getElementById('edit-s-desc').value    = s.description || '';
+    document.getElementById('edit-s-price').value   = s.price || '';
+    document.getElementById('edit-s-featured').checked = !!s.featured;
+    serviceEditModal.classList.add('open');
+  }
+
+  document.getElementById('edit-s-save').addEventListener('click', async () => {
+    const id          = document.getElementById('edit-s-id').value;
+    const icon        = document.getElementById('edit-s-icon').value.trim() || '💅';
+    const title       = document.getElementById('edit-s-title').value.trim();
+    const description = document.getElementById('edit-s-desc').value.trim();
+    const price       = document.getElementById('edit-s-price').value.trim();
+    const featured    = document.getElementById('edit-s-featured').checked;
+    if (!title || !price) { showToast('Titre et prix requis','error'); return; }
+    const btn = document.getElementById('edit-s-save');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sauvegarde…';
+    try {
+      const res = await fetch(`${API}/api/admin/services/${encodeURIComponent(id)}`, {
+        method:'PUT', headers:{'Content-Type':'application/json','x-admin-token':TOKEN},
+        body: JSON.stringify({ icon, title, description, price, featured }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      serviceEditModal.classList.remove('open');
+      showToast('Service mis à jour !'); loadServices();
+    } catch(e) { showToast(e.message,'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+  });
+
   document.getElementById('s-select-all').addEventListener('change', function() {
     document.querySelectorAll('#servicesList .item-check').forEach(cb => cb.checked = this.checked);
     updateBulkBar('s');
@@ -313,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderTutorials(tutorials) {
+    tutorialsCache = tutorials;
     const list = document.getElementById('tutorialsList');
     if (!tutorials.length) { list.innerHTML = '<p class="empty-state">Aucun tutoriel.</p>'; updateBulkBar('t'); return; }
     list.innerHTML = tutorials.map(t => `
@@ -323,9 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="item-badge" style="color:${levelColors[t.level]||'#555'}">${esc(t.level)}</span>
         <span class="item-badge">⏱ ${esc(t.duration)}</span>
         ${t.videoUrl ? `<span class="item-badge" style="background:#e8f5e9;color:#2e7d32">${t.videoUrl.startsWith('/api/videos/') ? '📁 Vidéo' : '▶ YouTube'}</span>` : ''}
+        <button class="btn-edit" data-id="${esc(String(t._id))}">✏ Modifier</button>
         <button class="btn-del" data-id="${esc(String(t._id))}">Supprimer</button>
       </div>`).join('');
     list.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteTutorial(b.dataset.id)));
+    list.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
+      const t = tutorialsCache.find(x => String(x._id) === b.dataset.id);
+      if (t) openTutoEdit(t);
+    }));
     list.querySelectorAll('.item-check').forEach(cb => cb.addEventListener('change', () => updateBulkBar('t')));
     updateBulkBar('t');
   }
@@ -368,6 +471,63 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { showToast(e.message||'Erreur','error'); }
   }
 
+  /* ── Tutorial edit modal ── */
+  const tutoEditModal = document.getElementById('tutoEditModal');
+  document.getElementById('edit-t-cancel').addEventListener('click', () => tutoEditModal.classList.remove('open'));
+  tutoEditModal.addEventListener('click', e => { if (e.target === tutoEditModal) tutoEditModal.classList.remove('open'); });
+
+  function openTutoEdit(t) {
+    document.getElementById('edit-t-id').value       = String(t._id);
+    document.getElementById('edit-t-title').value    = t.title || '';
+    document.getElementById('edit-t-level').value    = t.level || 'Débutant';
+    document.getElementById('edit-t-duration').value = t.duration || '';
+    document.getElementById('edit-t-short').value    = t.shortDesc || '';
+    document.getElementById('edit-t-desc').value     = t.description || '';
+    const hint      = document.getElementById('edit-t-video-hint');
+    const clearWrap = document.getElementById('edit-t-clear-wrap');
+    const clearCb   = document.getElementById('edit-t-clear-video');
+    if (t.videoUrl && t.videoUrl.startsWith('/api/videos/')) {
+      document.getElementById('edit-t-video').value = '';
+      hint.textContent = '📁 Vidéo uploadée en place.';
+      clearWrap.style.display = 'flex';
+      clearCb.checked = false;
+    } else {
+      document.getElementById('edit-t-video').value = t.videoUrl || '';
+      hint.textContent = '';
+      clearWrap.style.display = 'none';
+      clearCb.checked = false;
+    }
+    tutoEditModal.classList.add('open');
+  }
+
+  document.getElementById('edit-t-save').addEventListener('click', async () => {
+    const id         = document.getElementById('edit-t-id').value;
+    const title      = document.getElementById('edit-t-title').value.trim();
+    const level      = document.getElementById('edit-t-level').value;
+    const duration   = document.getElementById('edit-t-duration').value.trim();
+    const shortDesc  = document.getElementById('edit-t-short').value.trim();
+    const description= document.getElementById('edit-t-desc').value.trim();
+    const videoInput = document.getElementById('edit-t-video').value.trim();
+    const clearVideo = document.getElementById('edit-t-clear-video').checked;
+    if (!title) { showToast('Titre requis','error'); return; }
+    const body = { title, level, duration, shortDesc, description };
+    if (clearVideo) body.videoUrl = '';
+    else if (videoInput) body.videoUrl = videoInput;
+    const btn = document.getElementById('edit-t-save');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sauvegarde…';
+    try {
+      const res = await fetch(`${API}/api/admin/tutorials/${encodeURIComponent(id)}`, {
+        method:'PUT', headers:{'Content-Type':'application/json','x-admin-token':TOKEN},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      tutoEditModal.classList.remove('open');
+      showToast('Tutoriel mis à jour !'); loadTutorials();
+    } catch(e) { showToast(e.message,'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+  });
+
   document.getElementById('t-select-all').addEventListener('change', function() {
     document.querySelectorAll('#tutorialsList .item-check').forEach(cb => cb.checked = this.checked);
     updateBulkBar('t');
@@ -385,6 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderPrestations(prestations) {
+    prestationsCache = prestations;
     const list = document.getElementById('prestationsList');
     if (!prestations.length) { list.innerHTML = '<p class="empty-state">Aucune prestation.</p>'; updateBulkBar('p'); return; }
     list.innerHTML = prestations.map(p => `
@@ -393,9 +554,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="item-thumb" style="background:var(--pink-pale);display:flex;align-items:center;justify-content:center;font-size:1.5rem">${esc(p.icon)}</div>
         <div class="item-info"><strong>${esc(p.name)}</strong><small>Formulaire de réservation — Étape 1</small></div>
         <span class="item-badge">${esc(p.price)}</span>
+        <button class="btn-edit" data-id="${esc(String(p._id))}">✏ Modifier</button>
         <button class="btn-del" data-id="${esc(String(p._id))}">Supprimer</button>
       </div>`).join('');
     list.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deletePrestation(b.dataset.id)));
+    list.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
+      const p = prestationsCache.find(x => String(x._id) === b.dataset.id);
+      if (p) openPrestEdit(p);
+    }));
     list.querySelectorAll('.item-check').forEach(cb => cb.addEventListener('change', () => updateBulkBar('p')));
     updateBulkBar('p');
   }
@@ -425,6 +591,40 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Prestation supprimée'); loadPrestations();
     } catch(e) { showToast(e.message||'Erreur','error'); }
   }
+
+  /* ── Prestation edit modal ── */
+  const prestEditModal = document.getElementById('prestEditModal');
+  document.getElementById('edit-p-cancel').addEventListener('click', () => prestEditModal.classList.remove('open'));
+  prestEditModal.addEventListener('click', e => { if (e.target === prestEditModal) prestEditModal.classList.remove('open'); });
+
+  function openPrestEdit(p) {
+    document.getElementById('edit-p-id').value    = String(p._id);
+    document.getElementById('edit-p-icon').value  = p.icon || '';
+    document.getElementById('edit-p-name').value  = p.name || '';
+    document.getElementById('edit-p-price').value = p.price || '';
+    prestEditModal.classList.add('open');
+  }
+
+  document.getElementById('edit-p-save').addEventListener('click', async () => {
+    const id    = document.getElementById('edit-p-id').value;
+    const icon  = document.getElementById('edit-p-icon').value.trim() || '💅';
+    const name  = document.getElementById('edit-p-name').value.trim();
+    const price = document.getElementById('edit-p-price').value.trim();
+    if (!name || !price) { showToast('Nom et prix requis','error'); return; }
+    const btn = document.getElementById('edit-p-save');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sauvegarde…';
+    try {
+      const res = await fetch(`${API}/api/admin/prestations/${encodeURIComponent(id)}`, {
+        method:'PUT', headers:{'Content-Type':'application/json','x-admin-token':TOKEN},
+        body: JSON.stringify({ icon, name, price }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      prestEditModal.classList.remove('open');
+      showToast('Prestation mise à jour !'); loadPrestations();
+    } catch(e) { showToast(e.message,'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+  });
 
   document.getElementById('p-select-all').addEventListener('change', function() {
     document.querySelectorAll('#prestationsList .item-check').forEach(cb => cb.checked = this.checked);
@@ -592,6 +792,141 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     btn.disabled = n === 0;
     if (cnt) cnt.textContent = n > 0 ? `(${n})` : '';
+  }
+
+  /* ==========================================
+     GALERIE — CATÉGORIES
+     ========================================== */
+  async function loadCategories() {
+    try {
+      const res = await fetch(`${API}/api/gallery/categories`);
+      categoriesCache = res.ok ? await res.json() : [];
+    } catch { categoriesCache = []; }
+    renderCategories();
+    populateCategorySelects(categoriesCache);
+  }
+
+  function renderCategories() {
+    const list = document.getElementById('categoriesList');
+    if (!list) return;
+    if (!categoriesCache.length) { list.innerHTML = '<p class="empty-state">Aucune catégorie.</p>'; return; }
+    list.innerHTML = categoriesCache.map(c => `
+      <div class="item-row">
+        <div class="item-thumb" style="background:${esc(c.gradient)};flex-shrink:0;border-radius:8px"></div>
+        <div class="item-info"><strong>${esc(c.label)}</strong><small>slug : ${esc(c.slug)}</small></div>
+        <button class="btn-edit cat-edt" data-id="${esc(String(c._id))}">✏ Modifier</button>
+        <button class="btn-del cat-del" data-id="${esc(String(c._id))}">Supprimer</button>
+      </div>`).join('');
+    list.querySelectorAll('.cat-edt').forEach(b => b.addEventListener('click', () => {
+      const cat = categoriesCache.find(c => String(c._id) === b.dataset.id);
+      if (cat) openCatEdit(cat);
+    }));
+    list.querySelectorAll('.cat-del').forEach(b => b.addEventListener('click', () => deleteCategory(b.dataset.id)));
+  }
+
+  buildGradientPicker('catGradientPicker', 'cat-gradient', GRADIENT_PRESETS[0]);
+
+  document.getElementById('cat-submit').addEventListener('click', async () => {
+    const label    = document.getElementById('cat-label').value.trim();
+    const gradient = document.getElementById('cat-gradient').value;
+    if (!label) { showToast('Nom requis','error'); return; }
+    const btn = document.getElementById('cat-submit');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Création…';
+    try {
+      const res = await fetch(`${API}/api/admin/gallery/categories`, {
+        method:'POST', headers:{'Content-Type':'application/json','x-admin-token':TOKEN},
+        body: JSON.stringify({ label, gradient }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      document.getElementById('cat-label').value = '';
+      buildGradientPicker('catGradientPicker', 'cat-gradient', GRADIENT_PRESETS[0]);
+      showToast('Catégorie créée !'); loadCategories();
+    } catch(e) { showToast(e.message,'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Créer la catégorie'; }
+  });
+
+  async function deleteCategory(id) {
+    if (!confirm('Supprimer cette catégorie ?')) return;
+    try {
+      const res = await fetch(`${API}/api/admin/gallery/categories/${encodeURIComponent(id)}`, { method:'DELETE', headers:{'x-admin-token':TOKEN} });
+      if (!res.ok) throw new Error((await res.json()).error);
+      showToast('Catégorie supprimée'); loadCategories();
+    } catch(e) { showToast(e.message||'Erreur','error'); }
+  }
+
+  const catEditModal = document.getElementById('catEditModal');
+  document.getElementById('edit-cat-cancel').addEventListener('click', () => catEditModal.classList.remove('open'));
+  catEditModal.addEventListener('click', e => { if (e.target === catEditModal) catEditModal.classList.remove('open'); });
+
+  function openCatEdit(cat) {
+    document.getElementById('edit-cat-id').value    = String(cat._id);
+    document.getElementById('edit-cat-label').value = cat.label;
+    buildGradientPicker('editCatGradientPicker', 'edit-cat-gradient', cat.gradient);
+    catEditModal.classList.add('open');
+  }
+
+  document.getElementById('edit-cat-save').addEventListener('click', async () => {
+    const id       = document.getElementById('edit-cat-id').value;
+    const label    = document.getElementById('edit-cat-label').value.trim();
+    const gradient = document.getElementById('edit-cat-gradient').value;
+    if (!label) { showToast('Nom requis','error'); return; }
+    const btn = document.getElementById('edit-cat-save');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sauvegarde…';
+    try {
+      const res = await fetch(`${API}/api/admin/gallery/categories/${encodeURIComponent(id)}`, {
+        method:'PUT', headers:{'Content-Type':'application/json','x-admin-token':TOKEN},
+        body: JSON.stringify({ label, gradient }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      catEditModal.classList.remove('open');
+      showToast('Catégorie mise à jour !'); loadCategories();
+    } catch(e) { showToast(e.message,'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+  });
+
+  /* ==========================================
+     AVIS (reviews)
+     ========================================== */
+  document.getElementById('avisRefresh').addEventListener('click', loadReviews);
+
+  async function loadReviews() {
+    try {
+      const res = await fetch(`${API}/api/admin/reviews`, { headers:{'x-admin-token':TOKEN} });
+      if (!res.ok) throw new Error((await res.json()).error);
+      renderReviews(await res.json());
+    } catch(e) { showToast(e.message||'Erreur chargement avis','error'); }
+  }
+
+  function renderReviews(reviews) {
+    const list = document.getElementById('reviewsList');
+    if (!reviews.length) { list.innerHTML = '<p class="empty-state">Aucun avis.</p>'; return; }
+    list.innerHTML = reviews.map(r => {
+      const rating = Math.min(5, Math.max(0, r.rating || 0));
+      const stars  = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const date   = r.date ? new Date(r.date).toLocaleDateString('fr-FR') : '';
+      return `
+        <div class="review-card">
+          <div class="review-body">
+            <div class="review-name">${esc(r.name)} ${r.approved ? '' : '<span class="review-pending">En attente</span>'}</div>
+            <div class="review-stars">${stars}</div>
+            <div class="review-text">${esc(r.text || r.message || '')}</div>
+            <div class="review-meta">${date}${r.service ? ' · ' + esc(r.service) : ''}</div>
+          </div>
+          <button class="btn-del" data-id="${esc(String(r._id))}" style="flex-shrink:0">Supprimer</button>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteReview(b.dataset.id)));
+  }
+
+  async function deleteReview(id) {
+    if (!confirm('Supprimer cet avis définitivement ?')) return;
+    try {
+      const res = await fetch(`${API}/api/admin/reviews/${encodeURIComponent(id)}`, { method:'DELETE', headers:{'x-admin-token':TOKEN} });
+      if (!res.ok) throw new Error((await res.json()).error);
+      showToast('Avis supprimé'); loadReviews();
+    } catch(e) { showToast(e.message||'Erreur','error'); }
   }
 
 }); // fin DOMContentLoaded
