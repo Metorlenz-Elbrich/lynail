@@ -18,11 +18,7 @@ const { ObjectId } = require('mongodb');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-/* ==========================================
-   DOSSIER UPLOADS
-   ========================================== */
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+/* Les images sont stockées dans MongoDB — pas de dossier uploads local */
 
 /* ==========================================
    SÉCURITÉ — Headers (helmet)
@@ -127,18 +123,9 @@ function toObjectId(id) {
 const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const ALLOWED_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename:    (_req,  file, cb) => {
-    const ext  = path.extname(file.originalname).toLowerCase();
-    const name = crypto.randomBytes(16).toString('hex') + ext;
-    cb(null, name);
-  },
-});
-
 const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // 5 MB max
+  storage: multer.memoryStorage(),              // buffer en mémoire → stocké dans MongoDB
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ALLOWED_MIMES.has(file.mimetype) && ALLOWED_EXTS.has(ext)) {
@@ -278,6 +265,22 @@ app.post('/api/newsletter', async (req, res) => {
    CONTENU PUBLIC
    ========================================== */
 
+/* Servir une image stockée dans MongoDB */
+app.get('/api/images/:id', async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).send('ID invalide');
+  try {
+    const img = await db.getImage(oid);
+    if (!img) return res.status(404).send('Image introuvable');
+    res.set('Content-Type', img.mimetype);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable'); // cache navigateur 1 an
+    res.send(img.data.buffer ?? img.data);
+  } catch (err) {
+    console.error('[Images] :', err.message);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 app.get('/api/gallery',     async (_req, res) => { try { res.json(await db.getGallery());     } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
 app.get('/api/services',    async (_req, res) => { try { res.json(await db.getServices());    } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
 app.get('/api/tutorials',   async (_req, res) => { try { res.json(await db.getTutorials());   } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
@@ -322,10 +325,11 @@ app.post('/api/admin/gallery', adminAuth, upload.single('image'), async (req, re
   const allowedCats = new Set(Object.keys(catGradients));
   if (!allowedCats.has(category)) return res.status(400).json({ error: 'Catégorie invalide.' });
 
-  // Priorité : fichier uploadé > URL fournie > gradient par défaut
+  // Priorité : fichier uploadé (→ MongoDB) > URL fournie > gradient par défaut
   let finalUrl = '';
   if (req.file) {
-    finalUrl = `/uploads/${req.file.filename}`;
+    const imageId = await db.insertImage(req.file.buffer, req.file.mimetype);
+    finalUrl = `/api/images/${imageId}`;
   } else if (imageUrl?.trim()) {
     // Valider que c'est bien une URL HTTP/HTTPS (A10: SSRF mitigation)
     try {
@@ -355,11 +359,11 @@ app.delete('/api/admin/gallery/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
   try {
-    // Supprimer le fichier local si c'est un upload
     const item = await db.getGalleryItem(oid);
-    if (item?.imageUrl?.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, item.imageUrl);
-      fs.unlink(filePath, () => {}); // silencieux
+    // Supprimer l'image dans MongoDB si elle y est stockée
+    if (item?.imageUrl?.startsWith('/api/images/')) {
+      const imgOid = toObjectId(item.imageUrl.replace('/api/images/', ''));
+      if (imgOid) await db.deleteImage(imgOid);
     }
     await db.deleteGalleryItem(oid);
     res.json({ success: true });

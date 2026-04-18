@@ -73,6 +73,22 @@ const db = {
     return (await connect()).collection('gallery').deleteOne({ _id: oid });
   },
 
+  /* ── Images (stockage binaire MongoDB — pas de filesystem) ── */
+  async insertImage(buffer, mimetype) {
+    const col = (await connect()).collection('images');
+    const result = await col.insertOne({ data: buffer, mimetype, created_at: new Date() });
+    return result.insertedId;
+  },
+  async getImage(oid) {
+    return (await connect()).collection('images').findOne(
+      { _id: oid },
+      { projection: { data: 1, mimetype: 1 } }
+    );
+  },
+  async deleteImage(oid) {
+    return (await connect()).collection('images').deleteOne({ _id: oid });
+  },
+
   /* ── Services ── */
   async getServices() {
     return (await connect()).collection('services').find().sort({ order: 1 }).toArray();
