@@ -290,7 +290,7 @@ Au clic sur "Confirmer", un `fetch POST /api/orders` est déclenché avec :
 {
   "num": "LN-2026-437",
   "name": "Marie Dupont",
-  "service": "Pose Gel (35€)",
+  "service": "Pose Gel (55$ CAD)",
   "date": { "day": 25, "month": 3, "year": 2026 },
   "time": "10:00",
   "email": "marie@example.com",
@@ -405,7 +405,7 @@ Crée une nouvelle réservation.
 {
   "num": "LN-2026-437",
   "name": "Marie Dupont",
-  "service": "Pose Gel (35€)",
+  "service": "Pose Gel (55$ CAD)",
   "date": { "day": 25, "month": 3, "year": 2026 },
   "time": "10:00",
   "email": "marie@example.com",
@@ -440,7 +440,7 @@ Récupère l'état d'une commande par son numéro de suivi.
 {
   "num": "LN-2024-001",
   "name": "Sophie M.",
-  "service": "Nail Art Premium (55€)",
+  "service": "Nail Art Premium (80$ CAD)",
   "date": { "day": 20, "month": 0, "year": 2024 },
   "time": "14:00",
   "email": "sophie@example.com",
@@ -562,9 +562,9 @@ Au premier démarrage, si les fichiers sont vides, `database.js` insère automat
 **Commandes démo :**
 | Numéro | Cliente | Service | Statut |
 |--------|---------|---------|--------|
-| LN-2024-001 | Sophie M. | Nail Art Premium (55€) | Prêt à récupérer |
-| LN-2024-002 | Camille L. | Pose Gel (35€) | En cours de préparation |
-| LN-2024-003 | Julie R. | Extensions Acrylique (65€) | Terminé |
+| LN-2024-001 | Sophie M. | Nail Art Premium (80$ CAD) | Prêt à récupérer |
+| LN-2024-002 | Camille L. | Pose Gel (55$ CAD) | En cours de préparation |
+| LN-2024-003 | Julie R. | Extensions Acrylique (90$ CAD) | Terminé |
 
 **Avis par défaut :** 6 avis avec des dates échelonnées (2 jours, 5 jours, 1 semaine, 2 semaines, 3 semaines, 1 mois).
 
@@ -574,7 +574,7 @@ Au premier démarrage, si les fichiers sont vides, `database.js` insère automat
 {
   "num": "LN-2026-437",
   "name": "Marie Dupont",
-  "service": "Pose Gel (35€)",
+  "service": "Pose Gel (55$ CAD)",
   "date": { "day": 25, "month": 3, "year": 2026 },
   "time": "10:00",
   "email": "marie@example.com",

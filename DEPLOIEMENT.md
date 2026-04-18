@@ -110,7 +110,7 @@ Remplir les champs comme suit, **ligne par ligne** :
 | Champ | Valeur à entrer |
 |-------|----------------|
 | **Name** | `lydhas-nails-studio` |
-| **Region** | `Frankfurt (EU Central)` — le plus proche de Paris |
+| **Region** | `Ohio (US East)` — le plus proche d'Ottawa |
 | **Branch** | `main` |
 | **Root Directory** | laisser vide |
 | **Runtime** | `Node` |
@@ -254,7 +254,7 @@ sauvegardés dans le cloud même si Render redémarre.
 1. Après connexion, cliquer **Create a cluster**
 2. Choisir **M0 Free** (la colonne gratuite)
 3. **Provider** : AWS
-4. **Region** : `eu-west-1 (Ireland)` — le plus proche de Paris
+4. **Region** : `ca-central-1 (Canada — Montréal)` — le plus proche d'Ottawa
 5. **Cluster Name** : `lydhas-nails`
 6. Cliquer **Create Deployment**
 7. Attendre 2-3 minutes que le cluster se crée
@@ -353,9 +353,9 @@ const db = {
 async function seed(database) {
   const orders = database.collection('orders');
   const demos = [
-    { num: 'LN-2024-001', name: 'Sophie M.',  service: 'Nail Art Premium (55€)',     date: { day:20, month:0, year:2024 }, time:'14:00', email:'sophie@example.com',  status:'ready',      status_label:'Prêt à récupérer',           step1:1,step2:1,step3:1,step4:0 },
-    { num: 'LN-2024-002', name: 'Camille L.', service: 'Pose Gel (35€)',              date: { day:22, month:0, year:2024 }, time:'10:30', email:'camille@example.com', status:'preparing',  status_label:'En cours de préparation',    step1:1,step2:1,step3:0,step4:0 },
-    { num: 'LN-2024-003', name: 'Julie R.',   service: 'Extensions Acrylique (65€)', date: { day:18, month:0, year:2024 }, time:'16:00', email:'julie@example.com',   status:'completed',  status_label:'Terminé',                    step1:1,step2:1,step3:1,step4:1 },
+    { num: 'LN-2024-001', name: 'Sophie M.',  service: 'Nail Art Premium (80$ CAD)',     date: { day:20, month:0, year:2024 }, time:'14:00', email:'sophie@example.com',  status:'ready',      status_label:'Prêt à récupérer',           step1:1,step2:1,step3:1,step4:0 },
+    { num: 'LN-2024-002', name: 'Camille L.', service: 'Pose Gel (55$ CAD)',              date: { day:22, month:0, year:2024 }, time:'10:30', email:'camille@example.com', status:'preparing',  status_label:'En cours de préparation',    step1:1,step2:1,step3:0,step4:0 },
+    { num: 'LN-2024-003', name: 'Julie R.',   service: 'Extensions Acrylique (90$ CAD)', date: { day:18, month:0, year:2024 }, time:'16:00', email:'julie@example.com',   status:'completed',  status_label:'Terminé',                    step1:1,step2:1,step3:1,step4:1 },
   ];
   for (const d of demos) {
     await orders.updateOne({ num: d.num }, { $setOnInsert: { ...d, created_at: new Date('2024-01-15') } }, { upsert: true });
