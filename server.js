@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname)));   // sert index.html, style.css, 
    ========================================== */
 
 /* POST /api/orders — créer une réservation */
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const { num, name, service, date, time, email, phone, model_notes, message } = req.body;
 
   if (!num || !name || !service || !email) {
@@ -33,7 +33,7 @@ app.post('/api/orders', (req, res) => {
   }
 
   try {
-    const order = db.insertOrder({ num, name, service, date, time, email, phone, model_notes, message });
+    const order = await db.insertOrder({ num, name, service, date, time, email, phone, model_notes, message });
 
     sendOrderConfirmation({ num, name, service, date, time, email }).catch(err =>
       console.error('[Email] Erreur confirmation :', err.message)
@@ -50,9 +50,9 @@ app.post('/api/orders', (req, res) => {
 });
 
 /* GET /api/orders/:num — suivi d'une commande */
-app.get('/api/orders/:num', (req, res) => {
+app.get('/api/orders/:num', async (req, res) => {
   const num   = req.params.num.trim().toUpperCase();
-  const order = db.getOrder(num);
+  const order = await db.getOrder(num);
 
   if (!order) {
     return res.status(404).json({ error: 'Commande introuvable.' });
@@ -76,8 +76,10 @@ app.get('/api/orders/:num', (req, res) => {
    ========================================== */
 
 /* GET /api/reviews — liste des avis */
-app.get('/api/reviews', (req, res) => {
-  const reviews = db.getReviews().map(r => ({
+app.get('/api/reviews', async (req, res) => {
+  const reviewsData = await db.getReviews();
+
+  const reviews = reviewsData.map(r => ({
     id:      r.id,
     name:    r.name,
     service: r.service,
@@ -85,11 +87,12 @@ app.get('/api/reviews', (req, res) => {
     text:    r.text,
     date:    relativeDate(r.created_at)
   }));
+
   res.json(reviews);
 });
 
 /* POST /api/reviews — soumettre un avis */
-app.post('/api/reviews', (req, res) => {
+app.post('/api/reviews', async (req, res) => {
   const { name, service, rating, text } = req.body;
 
   if (!name || !text || !rating) {
@@ -103,7 +106,7 @@ app.post('/api/reviews', (req, res) => {
     return res.status(400).json({ error: "L'avis est trop court (minimum 10 caractères)." });
   }
 
-  const review = db.insertReview({
+  const review = await db.insertReview({
     name:    name.trim(),
     service: service?.trim() || 'Cliente LuxNails',
     rating:  r,
@@ -121,7 +124,7 @@ app.post('/api/reviews', (req, res) => {
    ========================================== */
 
 /* POST /api/contact */
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', async (req, res) => {
   const { name, email, sujet, msg } = req.body;
 
   if (!name || !email || !msg) {
@@ -131,7 +134,7 @@ app.post('/api/contact', (req, res) => {
     return res.status(400).json({ error: 'Adresse email invalide.' });
   }
 
-  db.insertContact({ name: name.trim(), email: email.trim(), subject: sujet ?? 'Autre', message: msg.trim() });
+  await db.insertContact({ name: name.trim(), email: email.trim(), subject: sujet ?? 'Autre', message: msg.trim() });
 
   sendContactNotification({ name, email, sujet, msg }).catch(err =>
     console.error('[Email] Erreur notification contact :', err.message)
@@ -145,7 +148,7 @@ app.post('/api/contact', (req, res) => {
    ========================================== */
 
 /* POST /api/newsletter */
-app.post('/api/newsletter', (req, res) => {
+app.post('/api/newsletter', async (req, res) => {
   const { email } = req.body;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -153,7 +156,7 @@ app.post('/api/newsletter', (req, res) => {
   }
 
   try {
-    db.insertNewsletter(email.trim());
+    await db.insertNewsletter(email.trim());
     res.json({ success: true });
   } catch (err) {
     if (err.code === 'UNIQUE') {

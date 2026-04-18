@@ -1,159 +1,82 @@
-/* ========================================
-   database.js — Store JSON (pur Node.js, sans dépendances natives)
-   Les données sont persistées dans le dossier /data/
-   ======================================== */
+const { MongoClient } = require('mongodb');
 
-const fs   = require('fs');
-const path = require('path');
+const uri    = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+let   _db    = null;
 
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-
-/* ---------- Helpers ---------- */
-
-function filePath(name) {
-  return path.join(DATA_DIR, `${name}.json`);
+async function connect() {
+  if (_db) return _db;
+  await client.connect();
+  _db = client.db('lydhas_nails');
+  await seed(_db);
+  console.log('[DB] Connecté à MongoDB Atlas');
+  return _db;
 }
-
-function readCollection(name) {
-  const fp = filePath(name);
-  if (!fs.existsSync(fp)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(fp, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function writeCollection(name, data) {
-  fs.writeFileSync(filePath(name), JSON.stringify(data, null, 2), 'utf8');
-}
-
-/* ---------- API publique ---------- */
 
 const db = {
-
-  /* -- ORDERS -- */
-
-  insertOrder(order) {
-    const orders = readCollection('orders');
-    if (orders.find(o => o.num === order.num)) {
-      throw Object.assign(new Error('UNIQUE constraint failed'), { code: 'UNIQUE' });
-    }
-    const row = {
-      ...order,
-      status:       order.status      || 'confirmed',
-      status_label: order.status_label || 'Confirmé',
-      step1: 1, step2: 0, step3: 0, step4: 0,
-      created_at: new Date().toISOString()
-    };
-    orders.push(row);
-    writeCollection('orders', orders);
+  async insertOrder(order) {
+    const col = (await connect()).collection('orders');
+    const exists = await col.findOne({ num: order.num });
+    if (exists) throw Object.assign(new Error('UNIQUE'), { code: 'UNIQUE' });
+    const row = { ...order, status: 'confirmed', status_label: 'Confirmé',
+      step1: 1, step2: 0, step3: 0, step4: 0, created_at: new Date() };
+    await col.insertOne(row);
     return row;
   },
-
-  getOrder(num) {
-    return readCollection('orders').find(o => o.num === num.toUpperCase()) || null;
+  async getOrder(num) {
+    return (await connect()).collection('orders').findOne({ num });
   },
-
-  /* -- REVIEWS -- */
-
-  getReviews() {
-    return readCollection('reviews').filter(r => r.approved);
+  async getReviews() {
+    return (await connect()).collection('reviews')
+      .find({ approved: true }).sort({ created_at: -1 }).toArray();
   },
-
-  insertReview(review) {
-    const reviews = readCollection('reviews');
-    const row = {
-      id:         reviews.length + 1,
-      name:       review.name,
-      service:    review.service || 'Cliente LuxNails',
-      rating:     review.rating,
-      text:       review.text,
-      approved:   true,
-      created_at: new Date().toISOString()
-    };
-    reviews.unshift(row);
-    writeCollection('reviews', reviews);
+  async insertReview(review) {
+    const col = (await connect()).collection('reviews');
+    const count = await col.countDocuments();
+    const row = { id: count + 1, ...review, approved: true, created_at: new Date() };
+    await col.insertOne(row);
     return row;
   },
-
-  /* -- CONTACTS -- */
-
-  insertContact(contact) {
-    const contacts = readCollection('contacts');
-    contacts.push({ ...contact, created_at: new Date().toISOString() });
-    writeCollection('contacts', contacts);
+  async insertContact(contact) {
+    const col = (await connect()).collection('contacts');
+    await col.insertOne({ ...contact, created_at: new Date() });
   },
-
-  /* -- NEWSLETTER -- */
-
-  insertNewsletter(email) {
-    const list = readCollection('newsletter');
-    if (list.find(e => e.email === email.toLowerCase())) {
-      throw Object.assign(new Error('UNIQUE constraint failed'), { code: 'UNIQUE' });
-    }
-    list.push({ email: email.toLowerCase(), created_at: new Date().toISOString() });
-    writeCollection('newsletter', list);
+  async insertNewsletter(email) {
+    const col = (await connect()).collection('newsletter');
+    const exists = await col.findOne({ email });
+    if (exists) throw Object.assign(new Error('UNIQUE'), { code: 'UNIQUE' });
+    await col.insertOne({ email, created_at: new Date() });
   }
 };
 
-/* ---------- Seed initial ---------- */
-
-function seed() {
-  /* Commandes démo */
-  const orders = readCollection('orders');
+async function seed(database) {
+  const orders = database.collection('orders');
   const demos = [
-    {
-      num: 'LN-2024-001', name: 'Sophie M.', service: 'Nail Art Premium (80$ CAD)',
-      date: { day: 20, month: 0, year: 2024 }, time: '14:00', email: 'sophie@example.com',
-      status: 'ready', status_label: 'Prêt à récupérer',
-      step1: 1, step2: 1, step3: 1, step4: 0
-    },
-    {
-      num: 'LN-2024-002', name: 'Camille L.', service: 'Pose Gel (55$ CAD)',
-      date: { day: 22, month: 0, year: 2024 }, time: '10:30', email: 'camille@example.com',
-      status: 'preparing', status_label: 'En cours de préparation',
-      step1: 1, step2: 1, step3: 0, step4: 0
-    },
-    {
-      num: 'LN-2024-003', name: 'Julie R.', service: 'Extensions Acrylique (90$ CAD)',
-      date: { day: 18, month: 0, year: 2024 }, time: '16:00', email: 'julie@example.com',
-      status: 'completed', status_label: 'Terminé',
-      step1: 1, step2: 1, step3: 1, step4: 1
-    }
+    { num: 'LN-2024-001', name: 'Sophie M.',  service: 'Nail Art Premium (80$ CAD)',     date: { day:20, month:0, year:2024 }, time:'14:00', email:'sophie@example.com',  status:'ready',      status_label:'Prêt à récupérer',           step1:1,step2:1,step3:1,step4:0 },
+    { num: 'LN-2024-002', name: 'Camille L.', service: 'Pose Gel (55$ CAD)',              date: { day:22, month:0, year:2024 }, time:'10:30', email:'camille@example.com', status:'preparing',  status_label:'En cours de préparation',    step1:1,step2:1,step3:0,step4:0 },
+    { num: 'LN-2024-003', name: 'Julie R.',   service: 'Extensions Acrylique (90$ CAD)', date: { day:18, month:0, year:2024 }, time:'16:00', email:'julie@example.com',   status:'completed',  status_label:'Terminé',                    step1:1,step2:1,step3:1,step4:1 },
   ];
-  for (const demo of demos) {
-    if (!orders.find(o => o.num === demo.num)) {
-      orders.push({ ...demo, created_at: new Date('2024-01-15').toISOString() });
-    }
+  for (const d of demos) {
+    await orders.updateOne({ num: d.num }, { $setOnInsert: { ...d, created_at: new Date('2024-01-15') } }, { upsert: true });
   }
-  writeCollection('orders', orders);
 
-  /* Avis par défaut */
-  if (readCollection('reviews').length === 0) {
+  const reviews = database.collection('reviews');
+  const count = await reviews.countDocuments();
+  if (count === 0) {
     const now = Date.now();
     const defaults = [
-      { name: 'Sophie M.',  service: 'Nail Art Premium',    rating: 5, daysAgo: 2,  text: "Absolument époustouflant ! Mes ongles sont devenus de vraies œuvres d'art. L'accueil est chaleureux et le résultat dépasse toutes mes attentes." },
-      { name: 'Camille L.', service: 'Pose Gel',             rating: 5, daysAgo: 5,  text: "Ma première pose gel ici et je suis conquise ! Tenue parfaite après 3 semaines, brillance incroyable. Je reviens sans hésiter." },
-      { name: 'Julie R.',   service: 'Extensions Acrylique', rating: 5, daysAgo: 7,  text: "Je cherchais des extensions naturelles et c'est exactement ce que j'ai eu. Technique impeccable, résultat magnifique et très confortable." },
-      { name: 'Marie T.',   service: 'Formation',            rating: 5, daysAgo: 14, text: "La formation est très complète et bien expliquée. En quelques heures, j'ai appris des techniques que je pensais impossibles. Merci infiniment !" },
-      { name: 'Léa D.',     service: 'French Manucure',      rating: 4, daysAgo: 21, text: "Très satisfaite de ma French manucure. Propre, élégante, exactement ce que je voulais. Je recommande à toutes mes amies." },
-      { name: 'Emma B.',    service: 'Nail Art Floral',      rating: 5, daysAgo: 30, text: "Je voulais quelque chose d'unique pour mon mariage et j'ai été gâtée ! Motifs floraux exquis, un vrai travail d'artiste. Merci LuxNails !" },
+      { name:'Sophie M.',  service:'Nail Art Premium',    rating:5, daysAgo:2,  text:"Absolument époustouflant ! Mes ongles sont devenus de vraies œuvres d'art." },
+      { name:'Camille L.', service:'Pose Gel',             rating:5, daysAgo:5,  text:"Ma première pose gel ici et je suis conquise ! Tenue parfaite après 3 semaines." },
+      { name:'Julie R.',   service:'Extensions Acrylique', rating:5, daysAgo:7,  text:"Je cherchais des extensions naturelles et c'est exactement ce que j'ai eu." },
+      { name:'Marie T.',   service:'Formation',            rating:5, daysAgo:14, text:"La formation est très complète et bien expliquée. Merci infiniment !" },
+      { name:'Léa D.',     service:'French Manucure',      rating:4, daysAgo:21, text:"Très satisfaite de ma French manucure. Je recommande à toutes mes amies." },
+      { name:'Emma B.',    service:'Nail Art Floral',      rating:5, daysAgo:30, text:"Je voulais quelque chose d'unique pour mon mariage. Motifs floraux exquis !" },
     ];
-    const reviews = defaults.map((r, i) => ({
-      id:         i + 1,
-      name:       r.name,
-      service:    r.service,
-      rating:     r.rating,
-      text:       r.text,
-      approved:   true,
-      created_at: new Date(now - r.daysAgo * 86400000).toISOString()
-    }));
-    writeCollection('reviews', reviews);
+    await reviews.insertMany(defaults.map((r, i) => ({
+      id: i + 1, name: r.name, service: r.service, rating: r.rating,
+      text: r.text, approved: true, created_at: new Date(now - r.daysAgo * 86400000)
+    })));
   }
 }
-
-seed();
 
 module.exports = db;
