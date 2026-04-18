@@ -94,13 +94,15 @@ function renderGallery(filter = 'all') {
     const div = document.createElement('div');
     div.className = 'gallery-item';
     div.dataset.idx = idx;
-    const bgStyle = item.imageUrl
-      ? `background-image:url('${item.imageUrl}');background-size:cover;background-position:center`
-      : `background:${item.gradient}`;
+    const bgStyle = (item.imageUrl && !item.isVideo)
+      ? `background-image:url('${escHtml(item.imageUrl)}');background-size:cover;background-position:center`
+      : `background:${item.gradient || 'linear-gradient(135deg,#667eea,#764ba2)'}`;
     div.innerHTML = `
-      <div class="gallery-bg" style="${bgStyle}"></div>
+      <div class="gallery-bg" style="${bgStyle}">
+        ${item.isVideo ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.5rem;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.5)">▶</div>' : ''}
+      </div>
       <div class="gallery-overlay">
-        <span>${item.title}</span>
+        <span>${escHtml(item.title)}</span>
         <em>${categoryLabel(item.category)}</em>
       </div>`;
     div.addEventListener('click', () => openLightbox(idx));
@@ -133,18 +135,31 @@ function openLightbox(idx) {
 }
 function updateLightbox() {
   const item = currentFilteredItems[lightboxIndex];
-  if (item.imageUrl) {
+  /* Arrêter et supprimer toute vidéo précédente */
+  lightbox.querySelectorAll('.lb-video').forEach(v => { v.pause(); v.remove(); });
+
+  if (item.isVideo && item.imageUrl) {
+    lbImg.style.display = 'none';
+    const vid = document.createElement('video');
+    vid.className = 'lb-video';
+    vid.src       = item.imageUrl;
+    vid.controls  = true;
+    vid.autoplay  = true;
+    vid.style.cssText = 'max-width:90vw;max-height:75vh;border-radius:8px;display:block';
+    lbImg.parentNode.insertBefore(vid, lbImg);
+  } else if (item.imageUrl) {
+    lbImg.style.display = 'block';
     lbImg.src = item.imageUrl;
     lbImg.style.background = '';
     lbImg.style.width  = '';
     lbImg.style.height = '';
   } else {
+    lbImg.style.display = 'block';
     lbImg.style.background = item.gradient;
     lbImg.style.width  = '400px';
     lbImg.style.height = '400px';
     lbImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   }
-  lbImg.style.display = 'block';
   lbCaption.textContent = `${item.title} — ${categoryLabel(item.category)}`;
 }
 
@@ -236,12 +251,16 @@ document.getElementById('tutoGrid').addEventListener('click', e => {
   const t = tutorialsMap.get(btn.dataset.id);
   if (!t) return;
 
-  const embedUrl = getYoutubeEmbed(t.videoUrl);
   const videoBox = document.querySelector('#tutoModal .modal-video');
-  if (embedUrl) {
-    videoBox.innerHTML = `<iframe src="${escHtml(embedUrl)}" frameborder="0" allowfullscreen style="width:100%;height:100%;border-radius:12px 12px 0 0;min-height:280px"></iframe>`;
+  if (t.videoUrl?.startsWith('/api/videos/')) {
+    videoBox.innerHTML = `<video src="${escHtml(t.videoUrl)}" controls style="width:100%;height:100%;min-height:280px;border-radius:12px 12px 0 0;background:#000;display:block"></video>`;
   } else {
-    videoBox.innerHTML = `<div class="video-placeholder"><span class="big-play">▶</span><p id="tutoModalTitle">${escHtml(t.title)}</p></div>`;
+    const embedUrl = getYoutubeEmbed(t.videoUrl);
+    if (embedUrl) {
+      videoBox.innerHTML = `<iframe src="${escHtml(embedUrl)}" frameborder="0" allowfullscreen style="width:100%;height:100%;border-radius:12px 12px 0 0;min-height:280px"></iframe>`;
+    } else {
+      videoBox.innerHTML = `<div class="video-placeholder"><span class="big-play">▶</span><p id="tutoModalTitle">${escHtml(t.title)}</p></div>`;
+    }
   }
 
   document.getElementById('tutoModalInfo').innerHTML = `
@@ -254,7 +273,11 @@ document.getElementById('tutoGrid').addEventListener('click', e => {
   document.getElementById('tutoModal').classList.add('open');
 });
 
-document.getElementById('tutoModalClose').onclick = () => document.getElementById('tutoModal').classList.remove('open');
+document.getElementById('tutoModalClose').onclick = () => {
+  const modal = document.getElementById('tutoModal');
+  modal.querySelectorAll('video').forEach(v => v.pause());
+  modal.classList.remove('open');
+};
 document.getElementById('tutoModal').addEventListener('click', e => {
   if (e.target === document.getElementById('tutoModal')) document.getElementById('tutoModal').classList.remove('open');
 });

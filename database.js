@@ -1,4 +1,4 @@
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ObjectId, GridFSBucket } = require('mongodb');
 
 const uri    = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
@@ -27,6 +27,13 @@ const db = {
   },
   async getOrder(num) {
     return (await connect()).collection('orders').findOne({ num });
+  },
+  async getOrders() {
+    return (await connect()).collection('orders').find().sort({ created_at: -1 }).toArray();
+  },
+  async updateOrder(num, updates) {
+    delete updates._id;
+    return (await connect()).collection('orders').updateOne({ num }, { $set: updates });
   },
 
   /* ── Reviews ── */
@@ -69,6 +76,10 @@ const db = {
   async getGalleryItem(oid) {
     return (await connect()).collection('gallery').findOne({ _id: oid });
   },
+  async updateGalleryItem(oid, updates) {
+    delete updates._id;
+    return (await connect()).collection('gallery').updateOne({ _id: oid }, { $set: updates });
+  },
   async deleteGalleryItem(oid) {
     return (await connect()).collection('gallery').deleteOne({ _id: oid });
   },
@@ -87,6 +98,34 @@ const db = {
   },
   async deleteImage(oid) {
     return (await connect()).collection('images').deleteOne({ _id: oid });
+  },
+
+  /* ── Videos (GridFS — fichiers > 16 Mo) ── */
+  async uploadVideo(buffer, filename, mimetype) {
+    const d = await connect();
+    const bucket = new GridFSBucket(d, { bucketName: 'videos' });
+    const stream = bucket.openUploadStream(filename, { contentType: mimetype });
+    return new Promise((resolve, reject) => {
+      stream.on('finish', () => resolve(stream.id));
+      stream.on('error', reject);
+      stream.end(buffer);
+    });
+  },
+  async openVideoDownloadStream(oid, options) {
+    const d = await connect();
+    const bucket = new GridFSBucket(d, { bucketName: 'videos' });
+    return bucket.openDownloadStream(oid, options);
+  },
+  async getVideoInfo(oid) {
+    const d = await connect();
+    const bucket = new GridFSBucket(d, { bucketName: 'videos' });
+    const files = await bucket.find({ _id: oid }).toArray();
+    return files[0] || null;
+  },
+  async deleteVideo(oid) {
+    const d = await connect();
+    const bucket = new GridFSBucket(d, { bucketName: 'videos' });
+    await bucket.delete(oid);
   },
 
   /* ── Services ── */
@@ -122,6 +161,9 @@ const db = {
   async updateTutorial(oid, updates) {
     delete updates._id;
     return (await connect()).collection('tutorials').updateOne({ _id: oid }, { $set: updates });
+  },
+  async getTutorial(oid) {
+    return (await connect()).collection('tutorials').findOne({ _id: oid });
   },
   async deleteTutorial(oid) {
     return (await connect()).collection('tutorials').deleteOne({ _id: oid });

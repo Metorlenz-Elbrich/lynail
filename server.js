@@ -122,17 +122,30 @@ function toObjectId(id) {
    ========================================== */
 const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const ALLOWED_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+const VIDEO_MIMES   = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']);
+const VIDEO_EXTS    = new Set(['.mp4', '.webm', '.ogv', '.ogg', '.mov']);
 
+/* Images uniquement (5 Mo) */
 const upload = multer({
-  storage: multer.memoryStorage(),              // buffer en mémoire → stocké dans MongoDB
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_MIMES.has(file.mimetype) && ALLOWED_EXTS.has(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Seules les images jpg, png, gif, webp sont acceptées.'));
-    }
+    if (ALLOWED_MIMES.has(file.mimetype) && ALLOWED_EXTS.has(ext)) cb(null, true);
+    else cb(new Error('Seules les images jpg, png, gif, webp sont acceptées.'));
+  },
+});
+
+/* Images + vidéos (50 Mo) */
+const uploadMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isImg = ALLOWED_MIMES.has(file.mimetype) && ALLOWED_EXTS.has(ext);
+    const isVid = VIDEO_MIMES.has(file.mimetype) && VIDEO_EXTS.has(ext);
+    if (isImg || isVid) cb(null, true);
+    else cb(new Error('Format non supporté. Utilisez jpg, png, gif, webp, mp4, webm ou mov.'));
   },
 });
 
@@ -281,6 +294,37 @@ app.get('/api/images/:id', async (req, res) => {
   }
 });
 
+/* Streaming vidéo depuis GridFS avec support Range (lecture navigateur) */
+app.get('/api/videos/:id', async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).send('ID invalide');
+  try {
+    const info = await db.getVideoInfo(oid);
+    if (!info) return res.status(404).send('Vidéo introuvable');
+    const contentType = info.contentType || 'video/mp4';
+    const total = info.length;
+    const range = req.headers.range;
+    if (range) {
+      const [s, e] = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(s, 10);
+      const end   = e ? parseInt(e, 10) : total - 1;
+      res.writeHead(206, {
+        'Content-Range':  `bytes ${start}-${end}/${total}`,
+        'Accept-Ranges':  'bytes',
+        'Content-Length': end - start + 1,
+        'Content-Type':   contentType,
+      });
+      (await db.openVideoDownloadStream(oid, { start, end: end + 1 })).pipe(res);
+    } else {
+      res.set({ 'Content-Type': contentType, 'Content-Length': total, 'Accept-Ranges': 'bytes' });
+      (await db.openVideoDownloadStream(oid)).pipe(res);
+    }
+  } catch (err) {
+    console.error('[Videos] :', err.message);
+    if (!res.headersSent) res.status(500).send('Erreur serveur');
+  }
+});
+
 app.get('/api/gallery',     async (_req, res) => { try { res.json(await db.getGallery());     } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
 app.get('/api/services',    async (_req, res) => { try { res.json(await db.getServices());    } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
 app.get('/api/tutorials',   async (_req, res) => { try { res.json(await db.getTutorials());   } catch { res.status(500).json({ error: 'Erreur serveur.' }); } });
@@ -289,6 +333,108 @@ app.get('/api/prestations', async (_req, res) => { try { res.json(await db.getPr
 /* ==========================================
    ADMIN — authentification
    ========================================== */
+
+/* ==========================================
+   ADMIN — Commandes (suivi)
+   ========================================== */
+
+const ALLOWED_STATUSES = new Set(['confirmed', 'preparing', 'ready', 'completed', 'cancelled']);
+const STATUS_STEPS = {
+  confirmed:  { label: 'Confirmé',                step1:1, step2:0, step3:0, step4:0 },
+  preparing:  { label: 'En cours de préparation', step1:1, step2:1, step3:0, step4:0 },
+  ready:      { label: 'Prêt à récupérer',        step1:1, step2:1, step3:1, step4:0 },
+  completed:  { label: 'Terminé',                 step1:1, step2:1, step3:1, step4:1 },
+  cancelled:  { label: 'Annulé',                  step1:1, step2:0, step3:0, step4:0 },
+};
+
+app.get('/api/admin/orders', adminAuth, async (_req, res) => {
+  try {
+    const orders = await db.getOrders();
+    const MONTHS = ['jan.','fév.','mars','avr.','mai','juin','juil.','août','sep.','oct.','nov.','déc.'];
+    res.json(orders.map(o => ({
+      num:         o.num,
+      name:        o.name,
+      service:     o.service,
+      dateStr:     o.date ? `${o.date.day} ${MONTHS[o.date.month]} ${o.date.year}` : '—',
+      time:        o.time || '—',
+      email:       o.email,
+      phone:       o.phone || '',
+      status:      o.status,
+      statusLabel: o.status_label,
+      steps:       [!!o.step1, !!o.step2, !!o.step3, !!o.step4],
+      created_at:  o.created_at,
+    })));
+  } catch (err) {
+    console.error('[Admin/Orders] :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+app.put('/api/admin/orders/:num', adminAuth, async (req, res) => {
+  const num = req.params.num.trim().toUpperCase().slice(0, 30);
+  if (!num) return res.status(400).json({ error: 'Numéro de commande requis.' });
+
+  const { status } = req.body;
+  if (!status || !ALLOWED_STATUSES.has(status))
+    return res.status(400).json({ error: 'Statut invalide.' });
+
+  const preset = STATUS_STEPS[status];
+  try {
+    const result = await db.updateOrder(num, {
+      status,
+      status_label: preset.label,
+      step1: preset.step1,
+      step2: preset.step2,
+      step3: preset.step3,
+      step4: preset.step4,
+    });
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Commande introuvable.' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Orders] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+/* ==========================================
+   ADMIN — Gallery CRUD (update)
+   ========================================== */
+
+const CAT_GRADIENTS = {
+  gel:        'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
+  'nail-art': 'linear-gradient(135deg,#c471f5,#fa71cd)',
+  acrylique:  'linear-gradient(135deg,#f7971e,#ffd200)',
+  naturel:    'linear-gradient(135deg,#d4fc79,#96e6a1)',
+  french:     'linear-gradient(135deg,#f8f9fa,#e9ecef)',
+};
+
+app.put('/api/admin/gallery/:id', adminAuth, async (req, res) => {
+  const oid = toObjectId(req.params.id);
+  if (!oid) return res.status(400).json({ error: 'ID invalide.' });
+
+  const { title, category } = req.body;
+  const updates = {};
+
+  if (title !== undefined) {
+    if (String(title).trim().length === 0 || String(title).length > 100)
+      return res.status(400).json({ error: 'Titre invalide (1–100 caractères).' });
+    updates.title = title.trim();
+  }
+  if (category !== undefined) {
+    if (!CAT_GRADIENTS[category]) return res.status(400).json({ error: 'Catégorie invalide.' });
+    updates.category = category;
+    updates.gradient = CAT_GRADIENTS[category];
+  }
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à mettre à jour.' });
+
+  try {
+    await db.updateGalleryItem(oid, updates);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin/Gallery] Update :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
 
 app.post('/api/admin/login', loginLimiter, (req, res) => {
   const { password } = req.body;
@@ -310,7 +456,7 @@ app.post('/api/admin/logout', adminAuth, (req, res) => {
    ADMIN — Gallery CRUD
    ========================================== */
 
-app.post('/api/admin/gallery', adminAuth, upload.single('image'), async (req, res) => {
+app.post('/api/admin/gallery', adminAuth, uploadMedia.single('media'), async (req, res) => {
   const { title, category, imageUrl } = req.body;
   if (!title || !category) return res.status(400).json({ error: 'title et category requis.' });
   if (String(title).length > 100) return res.status(400).json({ error: 'Titre trop long.' });
@@ -325,31 +471,27 @@ app.post('/api/admin/gallery', adminAuth, upload.single('image'), async (req, re
   const allowedCats = new Set(Object.keys(catGradients));
   if (!allowedCats.has(category)) return res.status(400).json({ error: 'Catégorie invalide.' });
 
-  // Priorité : fichier uploadé (→ MongoDB) > URL fournie > gradient par défaut
   let finalUrl = '';
-  if (req.file) {
-    const imageId = await db.insertImage(req.file.buffer, req.file.mimetype);
-    finalUrl = `/api/images/${imageId}`;
-  } else if (imageUrl?.trim()) {
-    // Valider que c'est bien une URL HTTP/HTTPS (A10: SSRF mitigation)
-    try {
-      const u = new URL(imageUrl.trim());
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
-      finalUrl = imageUrl.trim();
-    } catch {
-      return res.status(400).json({ error: 'URL invalide. Utilisez une URL http ou https.' });
-    }
-  }
-
+  let isVideo  = false;
   try {
-    const item = await db.insertGalleryItem({
-      title:     title.trim(),
-      category,
-      imageUrl:  finalUrl,
-      gradient:  catGradients[category],
-    });
+    if (req.file) {
+      if (VIDEO_MIMES.has(req.file.mimetype)) {
+        const videoId = await db.uploadVideo(req.file.buffer, req.file.originalname, req.file.mimetype);
+        finalUrl = `/api/videos/${videoId}`;
+        isVideo = true;
+      } else {
+        const imageId = await db.insertImage(req.file.buffer, req.file.mimetype);
+        finalUrl = `/api/images/${imageId}`;
+      }
+    } else if (imageUrl?.trim()) {
+      const u = new URL(imageUrl.trim());
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('protocole invalide');
+      finalUrl = imageUrl.trim();
+    }
+    const item = await db.insertGalleryItem({ title: title.trim(), category, imageUrl: finalUrl, isVideo, gradient: catGradients[category] });
     res.status(201).json(item);
   } catch (err) {
+    if (err.message.includes('invalide')) return res.status(400).json({ error: 'URL invalide. Utilisez une URL http ou https.' });
     console.error('[Admin/Gallery] :', err.message);
     res.status(500).json({ error: 'Erreur serveur.' });
   }
@@ -360,10 +502,12 @@ app.delete('/api/admin/gallery/:id', adminAuth, async (req, res) => {
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
   try {
     const item = await db.getGalleryItem(oid);
-    // Supprimer l'image dans MongoDB si elle y est stockée
     if (item?.imageUrl?.startsWith('/api/images/')) {
       const imgOid = toObjectId(item.imageUrl.replace('/api/images/', ''));
-      if (imgOid) await db.deleteImage(imgOid);
+      if (imgOid) await db.deleteImage(imgOid).catch(() => {});
+    } else if (item?.imageUrl?.startsWith('/api/videos/')) {
+      const vidOid = toObjectId(item.imageUrl.replace('/api/videos/', ''));
+      if (vidOid) await db.deleteVideo(vidOid).catch(() => {});
     }
     await db.deleteGalleryItem(oid);
     res.json({ success: true });
@@ -424,7 +568,7 @@ app.delete('/api/admin/services/:id', adminAuth, async (req, res) => {
    ADMIN — Tutorials CRUD
    ========================================== */
 
-app.post('/api/admin/tutorials', adminAuth, async (req, res) => {
+app.post('/api/admin/tutorials', adminAuth, uploadMedia.single('video'), async (req, res) => {
   const { title, shortDesc, description, level, duration, videoUrl, views, rating } = req.body;
   if (!title || !level) return res.status(400).json({ error: 'title et level requis.' });
 
@@ -432,7 +576,10 @@ app.post('/api/admin/tutorials', adminAuth, async (req, res) => {
   if (!allowedLevels.has(level)) return res.status(400).json({ error: 'Niveau invalide.' });
 
   let safeVideoUrl = '';
-  if (videoUrl?.trim()) {
+  if (req.file) {
+    const videoId = await db.uploadVideo(req.file.buffer, req.file.originalname, req.file.mimetype);
+    safeVideoUrl = `/api/videos/${videoId}`;
+  } else if (videoUrl?.trim()) {
     try {
       const u = new URL(videoUrl.trim());
       if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
@@ -476,6 +623,11 @@ app.delete('/api/admin/tutorials/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
   try {
+    const tuto = await db.getTutorial(oid);
+    if (tuto?.videoUrl?.startsWith('/api/videos/')) {
+      const vidOid = toObjectId(tuto.videoUrl.replace('/api/videos/', ''));
+      if (vidOid) await db.deleteVideo(vidOid).catch(() => {});
+    }
     await db.deleteTutorial(oid);
     res.json({ success: true });
   } catch (err) {
@@ -533,7 +685,7 @@ app.delete('/api/admin/prestations/:id', adminAuth, async (req, res) => {
    MULTER — gestion des erreurs d'upload
    ========================================== */
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError || err.message?.includes('image')) {
+  if (err instanceof multer.MulterError || err.message?.includes('image') || err.message?.includes('vidéo') || err.message?.includes('Format')) {
     return res.status(400).json({ error: err.message });
   }
   next(err);

@@ -491,7 +491,7 @@ textarea { resize: vertical; }
 .demo-num:hover { background: var(--pink); color: white; }
 
 /* ========== REVIEWS ========== */
-.reviews-carousel { position: relative; padding: 0 3rem; }
+.reviews-carousel { position: relative; overflow: hidden; }
 .reviews-track {
   display: flex; gap: 1.5rem; overflow: hidden;
   transition: transform var(--transition);
@@ -520,8 +520,8 @@ textarea { resize: vertical; }
   width: 44px; height: 44px; border-radius: 50%; font-size: 1.5rem;
   cursor: pointer; transition: all var(--transition);
 }
-.carousel-arrow.left { left: 0; }
-.carousel-arrow.right { right: 0; }
+.carousel-arrow.left { left: -1.5rem; }
+.carousel-arrow.right { right: -1.5rem; }
 .carousel-arrow:hover { background: var(--pink); transform: translateY(-50%) scale(1.1); }
 .review-dots { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; }
 .review-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: all var(--transition); }

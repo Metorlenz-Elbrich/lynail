@@ -18,6 +18,8 @@
       --white:      #ffffff;
       --danger:     #f44336;
       --success:    #4caf50;
+      --warning:    #ff9800;
+      --info:       #2196f3;
       --radius:     12px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,8 +28,7 @@
     /* ── Login ── */
     #loginScreen {
       display: flex; align-items: center; justify-content: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, var(--dark), #6b1548);
+      min-height: 100vh; background: linear-gradient(135deg, var(--dark), #6b1548);
     }
     .login-box {
       background: var(--white); border-radius: 20px; padding: 2.5rem;
@@ -51,11 +52,11 @@
     .header-brand span { color: var(--pink-light); }
 
     /* ── Tabs ── */
-    .tabs { background: var(--white); border-bottom: 2px solid var(--border); padding: 0 2rem; display: flex; gap: 0; }
+    .tabs { background: var(--white); border-bottom: 2px solid var(--border); padding: 0 2rem; display: flex; gap: 0; overflow-x: auto; }
     .tab-btn {
-      padding: 1rem 1.5rem; border: none; background: none; cursor: pointer;
-      font-family: inherit; font-size: 0.9rem; font-weight: 500; color: var(--text-light);
-      border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s;
+      padding: 1rem 1.25rem; border: none; background: none; cursor: pointer;
+      font-family: inherit; font-size: 0.88rem; font-weight: 500; color: var(--text-light);
+      border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap;
     }
     .tab-btn.active { color: var(--pink); border-bottom-color: var(--pink); }
     .tab-btn:hover  { color: var(--pink); }
@@ -63,15 +64,12 @@
     /* ── Tab content ── */
     .tab-panel { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
     .tab-panel.active { display: block; }
-
-    /* ── Section title ── */
     .panel-title { font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
 
-    /* ── Add form card ── */
+    /* ── Form card ── */
     .add-card {
       background: var(--white); border-radius: var(--radius); padding: 1.5rem;
-      box-shadow: 0 2px 16px rgba(233,30,140,0.08); margin-bottom: 2rem;
-      border: 1px solid var(--border);
+      box-shadow: 0 2px 16px rgba(233,30,140,0.08); margin-bottom: 2rem; border: 1px solid var(--border);
     }
     .add-card h3 { font-size: 0.95rem; color: var(--pink); margin-bottom: 1rem; font-weight: 600; }
     .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
@@ -99,10 +97,7 @@
       display: flex; align-items: center; gap: 1rem;
       box-shadow: 0 1px 8px rgba(0,0,0,0.06); border: 1px solid var(--border);
     }
-    .item-thumb {
-      width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0;
-      background-size: cover; background-position: center;
-    }
+    .item-thumb { width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0; background-size: cover; background-position: center; }
     .item-info { flex: 1; min-width: 0; }
     .item-info strong { font-size: 0.9rem; display: block; }
     .item-info small  { font-size: 0.78rem; color: var(--text-light); }
@@ -112,7 +107,7 @@
     }
     .item-badge.featured { background: #fff3cd; color: #856404; }
 
-    /* ── Gallery grid preview ── */
+    /* ── Gallery ── */
     .gallery-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
     .gal-item {
       border-radius: 10px; overflow: hidden; position: relative;
@@ -121,16 +116,136 @@
     .gal-item .gal-bg { width: 100%; height: 100%; background-size: cover; background-position: center; }
     .gal-item .gal-info {
       position: absolute; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      background: linear-gradient(transparent, rgba(0,0,0,0.75));
       padding: 0.4rem 0.5rem; color: #fff; font-size: 0.72rem;
     }
-    .gal-item .gal-del {
-      position: absolute; top: 6px; right: 6px;
-      background: rgba(244,67,54,0.9); color: #fff; border: none;
+    .gal-item .gal-del,
+    .gal-item .gal-edt {
+      position: absolute; top: 6px;
+      background: rgba(0,0,0,0.65); color: #fff; border: none;
       border-radius: 50%; width: 26px; height: 26px; cursor: pointer;
-      font-size: 0.75rem; display: none; align-items: center; justify-content: center;
+      font-size: 0.72rem; display: none; align-items: center; justify-content: center;
     }
-    .gal-item:hover .gal-del { display: flex; }
+    .gal-item .gal-del { right: 6px; background: rgba(244,67,54,0.85); }
+    .gal-item .gal-edt { right: 36px; }
+    .gal-item:hover .gal-del,
+    .gal-item:hover .gal-edt { display: flex; }
+    .gal-item .gal-check {
+      position: absolute; top: 7px; left: 7px; width: 17px; height: 17px;
+      accent-color: var(--pink); cursor: pointer; z-index: 2; opacity: 0; transition: opacity 0.15s;
+    }
+    .gal-item:hover .gal-check,
+    .gal-item .gal-check:checked { opacity: 1; }
+    .gal-item.is-video::after {
+      content: '▶'; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); font-size: 1.8rem;
+      color: rgba(255,255,255,0.9); pointer-events: none; text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* ── Gallery edit modal ── */
+    #galEditOverlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 500;
+      align-items: center; justify-content: center;
+    }
+    #galEditOverlay.open { display: flex; }
+    .gal-edit-box {
+      background: var(--white); border-radius: 16px; padding: 1.75rem;
+      width: 90%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .gal-edit-box h3 { font-size: 1rem; color: var(--pink); margin-bottom: 1.25rem; }
+
+    /* ── Bulk bar ── */
+    .bulk-bar {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.65rem 1rem; background: var(--pink-pale);
+      border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border);
+    }
+    .bulk-bar > label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; user-select: none; }
+    .bulk-bar > label input { accent-color: var(--pink); }
+    .btn-bulk-del {
+      margin-left: auto; background: var(--danger); color: #fff;
+      border: none; border-radius: 8px; padding: 0.38rem 0.9rem;
+      cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 600; transition: opacity 0.2s;
+    }
+    .btn-bulk-del:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-bulk-del:not(:disabled):hover { opacity: 0.85; }
+
+    /* ── Order cards ── */
+    .orders-search {
+      display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center;
+    }
+    .orders-search input {
+      flex: 1; min-width: 200px; padding: 0.55rem 1rem; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: inherit; font-size: 0.88rem; outline: none;
+    }
+    .orders-search input:focus { border-color: var(--pink); }
+    .orders-search select {
+      padding: 0.55rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 0.88rem; outline: none; background: #fff; cursor: pointer;
+    }
+    .order-card {
+      background: var(--white); border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 10px rgba(0,0,0,0.07); border: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+    }
+    .order-card-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+      margin-bottom: 0.75rem; flex-wrap: wrap;
+    }
+    .order-num { font-size: 0.8rem; font-weight: 700; color: var(--pink); letter-spacing: 0.5px; }
+    .order-client { font-size: 0.95rem; font-weight: 600; }
+    .order-service { font-size: 0.82rem; color: var(--text-light); }
+    .order-meta { font-size: 0.78rem; color: var(--text-light); margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .order-meta span { display: flex; align-items: center; gap: 0.3rem; }
+
+    /* Stepper */
+    .order-stepper {
+      display: flex; align-items: center; gap: 0; margin-bottom: 1rem;
+    }
+    .step-dot {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; border: 2px solid var(--border);
+      background: var(--white); color: var(--text-light); transition: all 0.2s;
+    }
+    .step-dot.done  { background: var(--pink); border-color: var(--pink); color: #fff; }
+    .step-dot.active { background: var(--white); border-color: var(--pink); color: var(--pink); }
+    .step-line { flex: 1; height: 3px; background: var(--border); transition: background 0.2s; }
+    .step-line.done { background: var(--pink); }
+    .step-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.68rem; color: var(--text-light); margin-bottom: 1rem;
+    }
+    .step-labels span { width: 28px; text-align: center; }
+    .step-labels span.done { color: var(--pink); font-weight: 600; }
+
+    /* Order actions */
+    .order-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .order-status-sel {
+      flex: 1; min-width: 180px; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: inherit; font-size: 0.85rem; outline: none;
+      background: #fff; cursor: pointer;
+    }
+    .order-status-sel:focus { border-color: var(--pink); }
+    .btn-order-save {
+      background: linear-gradient(135deg, var(--pink), var(--pink-light));
+      color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.1rem;
+      font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: opacity 0.2s;
+    }
+    .btn-order-save:hover { opacity: 0.9; }
+    .btn-order-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status badge on card header */
+    .status-badge {
+      font-size: 0.72rem; padding: 0.25rem 0.65rem; border-radius: 50px; font-weight: 600; white-space: nowrap;
+    }
+    .status-confirmed  { background: #e3f2fd; color: #1565c0; }
+    .status-preparing  { background: #fff8e1; color: #e65100; }
+    .status-ready      { background: #e8f5e9; color: #2e7d32; }
+    .status-completed  { background: #f3e5f5; color: #6a1b9a; }
+    .status-cancelled  { background: #fbe9e7; color: #bf360c; }
 
     /* ── Buttons ── */
     .btn-add {
@@ -148,6 +263,12 @@
       transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
     }
     .btn-del:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .btn-secondary {
+      background: none; border: 1.5px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--pink); color: var(--pink); }
     .btn-logout {
       background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
       border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer;
@@ -155,10 +276,10 @@
     }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
 
-    /* ── Common ── */
+    /* ── Upload areas ── */
     .upload-drop {
       border: 2px dashed var(--border); border-radius: 10px; padding: 1.25rem;
-      text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; display: block;
     }
     .upload-drop:hover, .upload-drop.drag-over { border-color: var(--pink); background: var(--pink-pale); }
     .upload-drop p { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--text-light); }
@@ -172,15 +293,16 @@
       animation: fadeInUp 0.3s ease; max-width: 300px;
     }
     @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .item-check { accent-color: var(--pink); flex-shrink: 0; }
 
     @media (max-width: 600px) {
-      .tabs { overflow-x: auto; }
-      .tab-btn { padding: 0.75rem 1rem; font-size: 0.82rem; white-space: nowrap; }
+      .tab-btn { padding: 0.75rem 1rem; font-size: 0.8rem; }
       .tab-panel { padding: 1rem; }
       header { padding: 0.75rem 1rem; }
+      .order-stepper { gap: 0; }
+      .step-dot { width: 22px; height: 22px; font-size: 0.65rem; }
     }
   </style>
 </head>
@@ -197,7 +319,7 @@
       <input type="password" id="loginPwd" placeholder="Entrez le mot de passe" autocomplete="current-password"/>
     </div>
     <p class="login-error" id="loginError">Mot de passe incorrect.</p>
-    <button class="btn-add" id="loginBtn" style="width:100%;margin-top:1rem" onclick="doLogin()">Se connecter</button>
+    <button class="btn-add" id="loginBtn" style="width:100%;margin-top:1rem">Se connecter</button>
   </div>
 </div>
 
@@ -207,7 +329,7 @@
     <div class="header-brand">LYDHAS <span>Admin</span></div>
     <div style="display:flex;align-items:center;gap:1rem">
       <a href="/" style="color:rgba(255,255,255,0.7);font-size:0.82rem;text-decoration:none">← Voir le site</a>
-      <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+      <button class="btn-logout" id="logoutBtn">Déconnexion</button>
     </div>
   </header>
 
@@ -216,14 +338,15 @@
     <button class="tab-btn" data-tab="services">💆 Services</button>
     <button class="tab-btn" data-tab="tutorials">🎬 Tutorat</button>
     <button class="tab-btn" data-tab="prestations">📋 Prestations</button>
+    <button class="tab-btn" data-tab="orders">📦 Commandes</button>
   </div>
 
   <!-- ── GALERIE ── -->
   <div class="tab-panel active" id="tab-gallery">
-    <div class="panel-title">🖼 Galerie de photos</div>
+    <div class="panel-title">🖼 Galerie de photos &amp; vidéos</div>
 
     <div class="add-card">
-      <h3>+ Ajouter une photo</h3>
+      <h3>+ Ajouter une photo ou vidéo</h3>
       <div class="form-row">
         <div class="form-group">
           <label>Titre *</label>
@@ -240,30 +363,31 @@
           </select>
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Image</label>
-          <div class="upload-area" id="uploadArea">
-            <input type="file" id="g-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
-            <div class="upload-drop" id="uploadDrop">
-              <span style="font-size:2rem">📷</span>
-              <p>Glissez une photo ici ou <button type="button" onclick="document.getElementById('g-file').click()" style="background:none;border:none;color:var(--pink);cursor:pointer;font-weight:600;font-family:inherit;padding:0">cliquez pour choisir un fichier</button></p>
-              <p id="fileChosenName" style="font-size:0.8rem;color:var(--text-light);margin-top:0.25rem"></p>
-            </div>
-          </div>
-          <p class="input-hint" style="margin-top:0.5rem">— ou collez une URL directe —</p>
+          <label>Fichier (photo ou vidéo)</label>
+          <label for="g-file" class="upload-drop" id="uploadDrop">
+            <span style="font-size:2rem">📷</span>
+            <p>Glissez une photo/vidéo ici ou <span style="color:var(--pink);font-weight:600">cliquez pour choisir un fichier</span></p>
+            <p id="fileChosenName" style="font-size:0.8rem;color:var(--text-light);margin-top:0.25rem"></p>
+          </label>
+          <input type="file" id="g-file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" style="display:none">
+          <p class="input-hint" style="margin-top:0.5rem">— ou collez une URL directe d'image —</p>
           <input type="url" id="g-url" placeholder="https://... (lien direct vers une image)" style="margin-top:0.35rem">
-          <p class="input-hint">Le fichier uploadé est prioritaire sur l'URL. Laissez les deux vides pour un fond coloré automatique.</p>
+          <p class="input-hint">Le fichier uploadé est prioritaire sur l'URL.</p>
         </div>
       </div>
-      <button class="btn-add" id="g-submit" onclick="addGalleryItem()">Ajouter à la galerie</button>
+      <button class="btn-add" id="g-submit">Ajouter à la galerie</button>
     </div>
 
+    <div class="bulk-bar">
+      <label><input type="checkbox" id="g-select-all"> Tout sélectionner</label>
+      <button class="btn-bulk-del" id="g-bulk-del" disabled>🗑 Supprimer la sélection <span id="g-bulk-count"></span></button>
+    </div>
     <div class="gallery-preview" id="galleryPreview"></div>
   </div>
 
   <!-- ── SERVICES ── -->
   <div class="tab-panel" id="tab-services">
     <div class="panel-title">💆 Nos Services</div>
-
     <div class="add-card">
       <h3>+ Ajouter un service</h3>
       <div class="form-row">
@@ -288,16 +412,18 @@
           <label for="s-featured">Marquer comme "Populaire"</label>
         </div>
       </div>
-      <button class="btn-add" id="s-submit" onclick="addService()">Ajouter le service</button>
+      <button class="btn-add" id="s-submit">Ajouter le service</button>
     </div>
-
+    <div class="bulk-bar">
+      <label><input type="checkbox" id="s-select-all"> Tout sélectionner</label>
+      <button class="btn-bulk-del" id="s-bulk-del" disabled>🗑 Supprimer la sélection <span id="s-bulk-count"></span></button>
+    </div>
     <div class="items-list" id="servicesList"></div>
   </div>
 
   <!-- ── TUTORAT ── -->
   <div class="tab-panel" id="tab-tutorials">
     <div class="panel-title">🎬 Espace Tutorat</div>
-
     <div class="add-card">
       <h3>+ Ajouter un tutoriel</h3>
       <div class="form-row">
@@ -318,22 +444,32 @@
           <input type="text" id="t-duration" placeholder="Ex : 15 min">
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Description courte (affichée sur la carte)</label>
+          <label>Description courte</label>
           <input type="text" id="t-short" placeholder="Ex : Apprenez la pose de A à Z">
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Description complète (affichée dans la modale)</label>
-          <textarea id="t-desc" placeholder="Description détaillée du tutoriel..."></textarea>
+          <label>Description complète</label>
+          <textarea id="t-desc" placeholder="Description détaillée..."></textarea>
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Lien vidéo YouTube (optionnel)</label>
+          <label>Vidéo YouTube (optionnel)</label>
           <input type="url" id="t-video" placeholder="https://www.youtube.com/watch?v=...">
-          <p class="input-hint">Collez ici le lien de votre vidéo YouTube. Laissez vide si pas encore disponible.</p>
+          <p class="input-hint">— ou uploadez directement une vidéo (max 50 Mo) —</p>
+          <label for="t-video-file" class="upload-drop" id="videoUploadDrop" style="padding:0.8rem;margin-top:0.35rem">
+            <span style="font-size:1.5rem">🎬</span>
+            <p>Glissez une vidéo ici ou <span style="color:var(--pink);font-weight:600">cliquez pour choisir</span></p>
+            <p id="videoChosenName" style="font-size:0.8rem;color:var(--text-light);margin-top:0.25rem"></p>
+          </label>
+          <input type="file" id="t-video-file" accept="video/mp4,video/webm,video/ogg,video/quicktime" style="display:none">
+          <p class="input-hint">Le fichier uploadé est prioritaire sur le lien YouTube.</p>
         </div>
       </div>
-      <button class="btn-add" id="t-submit" onclick="addTutorial()">Ajouter le tutoriel</button>
+      <button class="btn-add" id="t-submit">Ajouter le tutoriel</button>
     </div>
-
+    <div class="bulk-bar">
+      <label><input type="checkbox" id="t-select-all"> Tout sélectionner</label>
+      <button class="btn-bulk-del" id="t-bulk-del" disabled>🗑 Supprimer la sélection <span id="t-bulk-count"></span></button>
+    </div>
     <div class="items-list" id="tutorialsList"></div>
   </div>
 
@@ -341,7 +477,6 @@
   <div class="tab-panel" id="tab-prestations">
     <div class="panel-title">📋 Prestations (formulaire de réservation)</div>
     <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:1.5rem">Ces prestations apparaissent dans l'étape 1 du formulaire de prise de rendez-vous.</p>
-
     <div class="add-card">
       <h3>+ Ajouter une prestation</h3>
       <div class="form-row">
@@ -358,10 +493,60 @@
           <input type="text" id="p-price" placeholder="Ex : 70$ CAD">
         </div>
       </div>
-      <button class="btn-add" id="p-submit" onclick="addPrestation()">Ajouter la prestation</button>
+      <button class="btn-add" id="p-submit">Ajouter la prestation</button>
+    </div>
+    <div class="bulk-bar">
+      <label><input type="checkbox" id="p-select-all"> Tout sélectionner</label>
+      <button class="btn-bulk-del" id="p-bulk-del" disabled>🗑 Supprimer la sélection <span id="p-bulk-count"></span></button>
+    </div>
+    <div class="items-list" id="prestationsList"></div>
+  </div>
+
+  <!-- ── COMMANDES ── -->
+  <div class="tab-panel" id="tab-orders">
+    <div class="panel-title">📦 Suivi des commandes</div>
+
+    <div class="orders-search">
+      <input type="text" id="orderSearch" placeholder="🔍 Rechercher par N° ou nom de cliente…">
+      <select id="orderFilter">
+        <option value="all">Tous les statuts</option>
+        <option value="confirmed">Confirmé</option>
+        <option value="preparing">En préparation</option>
+        <option value="ready">Prêt à récupérer</option>
+        <option value="completed">Terminé</option>
+        <option value="cancelled">Annulé</option>
+      </select>
+      <button class="btn-secondary" id="ordersRefresh" style="white-space:nowrap">↻ Actualiser</button>
     </div>
 
-    <div class="items-list" id="prestationsList"></div>
+    <div id="ordersCount" style="font-size:0.82rem;color:var(--text-light);margin-bottom:1rem"></div>
+    <div id="ordersList"></div>
+  </div>
+</div><!-- fin #dashboard -->
+
+<!-- ========== GALLERY EDIT MODAL ========== -->
+<div id="galEditOverlay">
+  <div class="gal-edit-box">
+    <h3>✏ Modifier l'élément</h3>
+    <input type="hidden" id="edit-g-id">
+    <div class="form-group" style="margin-bottom:0.75rem">
+      <label>Titre</label>
+      <input type="text" id="edit-g-title" maxlength="100">
+    </div>
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label>Catégorie</label>
+      <select id="edit-g-cat">
+        <option value="gel">Pose Gel</option>
+        <option value="nail-art">Nail Art</option>
+        <option value="acrylique">Acrylique</option>
+        <option value="naturel">Naturel</option>
+        <option value="french">French</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button class="btn-secondary" id="edit-g-cancel">Annuler</button>
+      <button class="btn-add" id="edit-g-save" style="margin-top:0">Sauvegarder</button>
+    </div>
   </div>
 </div>
 
