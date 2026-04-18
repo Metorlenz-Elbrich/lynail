@@ -51,24 +51,29 @@ app.post('/api/orders', async (req, res) => {
 
 /* GET /api/orders/:num — suivi d'une commande */
 app.get('/api/orders/:num', async (req, res) => {
-  const num   = req.params.num.trim().toUpperCase();
-  const order = await db.getOrder(num);
+  try {
+    const num   = req.params.num.trim().toUpperCase();
+    const order = await db.getOrder(num);
 
-  if (!order) {
-    return res.status(404).json({ error: 'Commande introuvable.' });
+    if (!order) {
+      return res.status(404).json({ error: 'Commande introuvable.' });
+    }
+
+    res.json({
+      num:         order.num,
+      name:        order.name,
+      service:     order.service,
+      date:        order.date || null,
+      time:        order.time,
+      email:       order.email,
+      status:      order.status,
+      statusLabel: order.status_label,
+      steps:       [!!order.step1, !!order.step2, !!order.step3, !!order.step4]
+    });
+  } catch (err) {
+    console.error('[Orders] Erreur getOrder :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
   }
-
-  res.json({
-    num:         order.num,
-    name:        order.name,
-    service:     order.service,
-    date:        order.date || null,
-    time:        order.time,
-    email:       order.email,
-    status:      order.status,
-    statusLabel: order.status_label,
-    steps:       [!!order.step1, !!order.step2, !!order.step3, !!order.step4]
-  });
 });
 
 /* ==========================================
@@ -77,18 +82,23 @@ app.get('/api/orders/:num', async (req, res) => {
 
 /* GET /api/reviews — liste des avis */
 app.get('/api/reviews', async (req, res) => {
-  const reviewsData = await db.getReviews();
+  try {
+    const reviewsData = await db.getReviews();
 
-  const reviews = reviewsData.map(r => ({
-    id:      r.id,
-    name:    r.name,
-    service: r.service,
-    rating:  r.rating,
-    text:    r.text,
-    date:    relativeDate(r.created_at)
-  }));
+    const reviews = reviewsData.map(r => ({
+      id:      r.id,
+      name:    r.name,
+      service: r.service,
+      rating:  r.rating,
+      text:    r.text,
+      date:    relativeDate(r.created_at)
+    }));
 
-  res.json(reviews);
+    res.json(reviews);
+  } catch (err) {
+    console.error('[Reviews] Erreur getReviews :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
 });
 
 /* POST /api/reviews — soumettre un avis */
@@ -106,17 +116,22 @@ app.post('/api/reviews', async (req, res) => {
     return res.status(400).json({ error: "L'avis est trop court (minimum 10 caractères)." });
   }
 
-  const review = await db.insertReview({
-    name:    name.trim(),
-    service: service?.trim() || 'Cliente LuxNails',
-    rating:  r,
-    text:    text.trim()
-  });
+  try {
+    const review = await db.insertReview({
+      name:    name.trim(),
+      service: service?.trim() || 'Cliente LYDHAS',
+      rating:  r,
+      text:    text.trim()
+    });
 
-  res.status(201).json({
-    success: true,
-    review:  { ...review, date: "À l'instant" }
-  });
+    res.status(201).json({
+      success: true,
+      review:  { ...review, date: "À l'instant" }
+    });
+  } catch (err) {
+    console.error('[Reviews] Erreur insertReview :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
 });
 
 /* ==========================================
@@ -134,7 +149,12 @@ app.post('/api/contact', async (req, res) => {
     return res.status(400).json({ error: 'Adresse email invalide.' });
   }
 
-  await db.insertContact({ name: name.trim(), email: email.trim(), subject: sujet ?? 'Autre', message: msg.trim() });
+  try {
+    await db.insertContact({ name: name.trim(), email: email.trim(), subject: sujet ?? 'Autre', message: msg.trim() });
+  } catch (err) {
+    console.error('[Contact] Erreur insertContact :', err.message);
+    return res.status(500).json({ error: 'Erreur serveur.' });
+  }
 
   sendContactNotification({ name, email, sujet, msg }).catch(err =>
     console.error('[Email] Erreur notification contact :', err.message)

@@ -495,3 +495,205 @@ https://lydhas-nails-studio.onrender.com
 
 ### Les données disparaissent à chaque redéploiement
 → Mettre en place MongoDB Atlas (Partie 2 de ce guide)
+
+---
+
+# PARTIE 3 — Accessibilité depuis l'Afrique (Cameroun et autres)
+
+## Pourquoi le site est bloqué sans VPN
+
+Render héberge le serveur à **Ohio, États-Unis**. Quand quelqu'un au Cameroun essaie d'ouvrir le site, voici ce qui se passe :
+
+```
+Cameroun (Douala/Yaoundé)
+       │
+       │ câble sous-marin ACE ou SAT-3
+       ▼
+Europe (point de transit)
+       │
+       │ câble transatlantique
+       ▼
+États-Unis — Render (Ohio)
+```
+
+Plusieurs problèmes se cumulent :
+- **Latence élevée** : 300 à 500 ms aller-retour minimum
+- **Routage ISP défaillant** : certains fournisseurs internet africains (MTN, Orange, Camtel) ont de mauvaises routes vers les plages d'IP de Render
+- **Blocage de plages d'IP** : certains FAI bloquent involontairement des blocs d'adresses IP américains entiers
+- **Timeout DNS** : le domaine `.onrender.com` peut ne pas se résoudre correctement depuis certains serveurs DNS africains
+
+Le VPN fonctionne parce qu'il fait sortir le trafic depuis un pays avec une meilleure connectivité vers les USA.
+
+## La solution : Cloudflare comme bouclier mondial
+
+**Cloudflare** possède des data centers dans les grandes villes africaines, notamment :
+
+| Ville | Pays |
+|-------|------|
+| Douala | 🇨🇲 Cameroun |
+| Yaoundé | 🇨🇲 Cameroun |
+| Lagos | 🇳🇬 Nigeria |
+| Accra | 🇬🇭 Ghana |
+| Nairobi | 🇰🇪 Kenya |
+| Johannesburg | 🇿🇦 Afrique du Sud |
+| Abidjan | 🇨🇮 Côte d'Ivoire |
+| Dakar | 🇸🇳 Sénégal |
+
+Avec Cloudflare devant Render, la connexion devient :
+
+```
+Cameroun (Douala)
+       │
+       │ connexion locale courte ← BEAUCOUP mieux
+       ▼
+Cloudflare Douala (data center local)
+       │
+       │ réseau privé Cloudflare (rapide et fiable)
+       ▼
+Render (Ohio) ← les problèmes FAI disparaissent
+```
+
+La personne au Cameroun ne parle plus directement à un serveur américain — elle parle au data center Cloudflare de Douala, qui est sur le réseau local. Cloudflare gère ensuite la communication avec Render sur son réseau privé ultra-rapide.
+
+---
+
+## Solution A — Cloudflare en proxy devant Render (recommandé, ~10$/an)
+
+**Avantages** : aucune modification du code, rapide à mettre en place  
+**Coût** : uniquement le prix du nom de domaine (~10$/an), Cloudflare est gratuit
+
+### A.1 — Acheter un nom de domaine via Cloudflare
+
+Cloudflare vend les domaines **au prix coûtant**, sans marge — c'est le registrar le moins cher.
+
+1. Aller sur **https://dash.cloudflare.com** → créer un compte gratuit
+2. Dans le menu gauche, cliquer **Domain Registration** → **Register Domains**
+3. Chercher un nom disponible, par exemple :
+   - `lydhasnails.ca` (~12$/an — idéal pour le Canada)
+   - `lydhasnails.com` (~10$/an)
+   - `lydhas-nails.com` (~10$/an)
+4. Cliquer **Purchase** → remplir les informations de paiement
+5. Le domaine est actif en quelques minutes
+
+### A.2 — Ajouter le domaine à Cloudflare
+
+Si tu as acheté le domaine via Cloudflare, il est déjà dans ton tableau de bord.  
+Si tu l'as acheté ailleurs (Namecheap, GoDaddy...) :
+1. Cloudflare → **Add a Site** → entrer ton domaine
+2. Choisir le plan **Free**
+3. Cloudflare te montre tes DNS actuels — cliquer **Continue**
+4. Cloudflare te donne 2 serveurs DNS (ex: `kate.ns.cloudflare.com`) → les mettre chez ton registrar
+
+### A.3 — Pointer le domaine vers Render
+
+1. Dans Cloudflare → ton domaine → onglet **DNS** → **Records**
+2. Cliquer **Add record**
+3. Remplir :
+
+| Type | Name | Content | Proxy status |
+|------|------|---------|-------------|
+| `CNAME` | `@` | `lydhas-nails-studio.onrender.com` | ☁️ Proxied (orange) |
+| `CNAME` | `www` | `lydhas-nails-studio.onrender.com` | ☁️ Proxied (orange) |
+
+> ⚠️ Le bouton **Proxy status doit être orange** (☁️ Proxied), pas gris.  
+> C'est ça qui fait passer le trafic par Cloudflare. Si c'est gris, cliquer dessus pour l'activer.
+
+4. Cliquer **Save**
+
+### A.4 — Configurer le domaine personnalisé sur Render
+
+1. Render → ton service → onglet **Settings** → section **Custom Domains**
+2. Cliquer **Add Custom Domain**
+3. Entrer `lydhasnails.ca` (ou ton domaine)
+4. Render te donne un code de vérification DNS → retourner dans Cloudflare → DNS → ajouter ce record TXT
+5. Attendre 2-5 minutes → Render valide le domaine
+6. Render active automatiquement le certificat HTTPS
+
+### A.5 — Activer les optimisations Cloudflare pour l'Afrique
+
+Dans Cloudflare → ton domaine :
+
+**Speed → Optimization :**
+- **Auto Minify** : cocher JS, CSS, HTML ✅
+- **Brotli** : On ✅
+
+**Caching → Configuration :**
+- **Browser Cache TTL** : 4 hours
+
+**Network :**
+- **HTTP/2** : On ✅
+- **HTTP/3 (avec QUIC)** : On ✅ ← très important pour les connexions instables d'Afrique
+
+**Security :**
+- **SSL/TLS** : Full
+
+### A.6 — Tester depuis le Cameroun
+
+Demander à quelqu'un au Cameroun d'ouvrir `https://lydhasnails.ca` — ça doit fonctionner sans VPN.
+
+Pour tester toi-même depuis Ottawa, utiliser **https://www.uptrends.com/tools/uptime** et tester depuis des serveurs africains.
+
+---
+
+## Solution B — Cloudflare Workers (100% gratuit, code mondial)
+
+Si tu ne veux pas payer de domaine, ou si tu veux la solution la plus rapide possible partout dans le monde, **Cloudflare Workers** est fait pour ça.
+
+**Cloudflare Workers** = un serveur qui tourne simultanément dans **330+ data centers** dans le monde, dont Douala. Au lieu d'un seul serveur en Ohio, le code tourne littéralement à Douala quand quelqu'un du Cameroun accède au site.
+
+**Plan gratuit Workers :**
+- 100 000 requêtes/jour gratuites
+- Inclut un sous-domaine gratuit : `ton-site.ton-compte.workers.dev`
+- D1 (base de données SQLite dans Cloudflare) : 5 millions de lectures/jour gratuitement
+
+**Attention** : cette solution nécessite de réécrire `server.js` et `database.js` pour l'API Workers. C'est environ 2-3 heures de travail. Demande à Claude Code de faire la migration si tu choisis cette voie.
+
+---
+
+## Comparaison des deux solutions
+
+| | Solution A (Cloudflare + Render) | Solution B (Workers) |
+|---|---|---|
+| Coût | ~10$/an (domaine) | Gratuit |
+| Modifications de code | Aucune | server.js + database.js |
+| Vitesse au Cameroun | ⭐⭐⭐⭐ Excellente | ⭐⭐⭐⭐⭐ Maximale |
+| Vitesse à Ottawa | ⭐⭐⭐⭐ Excellente | ⭐⭐⭐⭐⭐ Maximale |
+| Mise en place | 1 heure | 3-4 heures |
+| Données persistantes | Via MongoDB Atlas | Via Cloudflare D1 |
+
+**Recommandation** : commence par la **Solution A**. Elle règle le problème sans toucher au code et un domaine professionnel (lydhasnails.ca) est de toute façon utile pour le salon. Migrer vers Workers plus tard si besoin.
+
+---
+
+## Architecture finale avec Cloudflare (Solution A)
+
+```
+Visiteur à Douala, Cameroun
+        │
+        │ connexion locale ~10ms
+        ▼
+┌─────────────────────────────────┐
+│  Cloudflare — Data center Douala│  ← Fichiers statiques servis en cache
+│  (cache HTML/CSS/JS)            │     depuis ici = ultra rapide
+└──────────────┬──────────────────┘
+               │ réseau privé Cloudflare
+               ▼
+┌─────────────────────────────────┐
+│  Render (Ohio, États-Unis)      │  ← API uniquement (/api/*)
+│  Node.js + Express              │     pas de problème FAI
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│  MongoDB Atlas (Canada)         │
+│  Données persistantes           │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│  Gmail SMTP                     │
+│  metorlenz2@gmail.com           │
+└─────────────────────────────────┘
+```
+
+Visiteur à Ottawa → même chemin, Cloudflare a aussi des data centers à Toronto et Montréal.
