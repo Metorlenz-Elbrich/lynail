@@ -247,7 +247,7 @@ textarea { resize: vertical; }
 /* ========== SERVICES ========== */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
 }
 .service-card {
@@ -653,4 +653,83 @@ footer {
   .tracking-search { flex-direction: column; }
   .form-steps { gap: 0.25rem; }
   .step { font-size: 0.7rem; padding: 0.4rem; }
+}
+/* ===== MOBILE FIRST FIX ===== */
+@media (max-width: 768px) {
+
+  /* Container */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* NAVBAR */
+  #navbar {
+    padding: 0.8rem 1rem;
+  }
+
+  .brand-name {
+    font-size: 1.1rem;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* HERO */
+  .hero-content {
+    padding: 1rem;
+  }
+
+  .hero-desc {
+    font-size: 0.95rem;
+  }
+
+  .hero-btns {
+    flex-direction: column;
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 3rem 0;
+  }
+
+  /* SERVICES */
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-card {
+    padding: 1.2rem;
+  }
+
+  /* GALLERY */
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* FORM */
+  .order-form {
+    padding: 1.5rem;
+  }
+
+  .form-steps {
+    flex-direction: column;
+  }
+
+  /* CONTACT */
+  .contact-form {
+    padding: 1.5rem;
+  }
+
+  /* FOOTER */
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* BUTTONS */
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
 }
