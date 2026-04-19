@@ -92,31 +92,68 @@ async function loadGalleryCategories() {
     { slug:'naturel',   label:'Naturel'    },
     { slug:'french',    label:'French'     },
   ];
-  let cats = FALLBACK;
+
+  let cats = null;
+
   try {
-    const res = await fetch(`${API}/api/gallery/categories`);
+    console.log('[Galerie] Chargement des catégories depuis /api/gallery/categories …');
+    const res = await fetch('/api/gallery/categories');
+    console.log('[Galerie] Réponse HTTP :', res.status, res.ok);
+
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) cats = data;
+      console.log('[Galerie] Données reçues :', data);
+
+      if (Array.isArray(data) && data.length > 0) {
+        /* Normalise label/name — le backend retourne "label", pas "name" */
+        cats = data.map(c => ({ slug: c.slug, label: c.label || c.name || c.slug }));
+        console.log('[Galerie] Catégories normalisées :', cats);
+      } else {
+        console.warn('[Galerie] Tableau vide ou format inattendu — utilisation du fallback');
+      }
+    } else {
+      console.error('[Galerie] Erreur API :', res.status);
     }
-  } catch { /* silencieux */ }
+  } catch (err) {
+    console.error('[Galerie] Fetch échoué :', err.message);
+  }
+
+  if (!cats) {
+    console.log('[Galerie] Utilisation du fallback statique');
+    cats = FALLBACK;
+  }
+
+  /* Mise à jour du dictionnaire de labels */
   galleryCatLabels = { all: 'Tous' };
   cats.forEach(c => { galleryCatLabels[c.slug] = c.label; });
-  buildGalleryFilters([{ slug: 'all', label: 'Tous' }, ...cats]);
-  renderGallery(document.querySelector('.gallery-filters .filter-btn.active')?.dataset.filter || 'all');
+
+  /* Construction des boutons de filtre */
+  buildGalleryFilters(cats);
+
+  /* Refresh de la galerie avec le filtre actif */
+  const activeFilter = document.querySelector('.gallery-filters .filter-btn.active');
+  renderGallery(activeFilter ? activeFilter.dataset.filter : 'all');
 }
 
 function buildGalleryFilters(cats) {
   const container = document.querySelector('.gallery-filters');
-  if (!container) return;
-  const currentFilter = container.querySelector('.filter-btn.active')?.dataset.filter || 'all';
-  container.innerHTML = cats.map(c =>
-    `<button class="filter-btn${c.slug === currentFilter ? ' active' : ''}" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`
-  ).join('');
-  if (!container.querySelector('.filter-btn.active')) {
-    const allBtn = container.querySelector('[data-filter="all"]');
-    if (allBtn) allBtn.classList.add('active');
+  if (!container) {
+    console.error('[Galerie] .gallery-filters introuvable dans le DOM');
+    return;
   }
+
+  /* Bouton "Tous" toujours en premier, puis les catégories DB */
+  const allButtons = [{ slug: 'all', label: 'Tous' }, ...cats];
+
+  container.innerHTML = allButtons.map(c =>
+    `<button class="filter-btn" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`
+  ).join('');
+
+  /* Active "Tous" par défaut */
+  const allBtn = container.querySelector('[data-filter="all"]');
+  if (allBtn) allBtn.classList.add('active');
+
+  console.log('[Galerie] Filtres construits :', allButtons.map(c => c.slug));
 }
 
 /* Delegation unique sur .gallery-filters — survive les rebuilds de innerHTML */

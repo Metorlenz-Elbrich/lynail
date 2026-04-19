@@ -753,8 +753,14 @@ function slugify(str) {
 }
 
 app.get('/api/gallery/categories', async (_req, res) => {
-  try { res.json(await db.getGalleryCategories()); }
-  catch { res.status(500).json({ error: 'Erreur serveur.' }); }
+  try {
+    const cats = await db.getGalleryCategories();
+    console.log(`[GalCats] GET /api/gallery/categories → ${cats.length} catégorie(s)`);
+    res.json(cats);
+  } catch (err) {
+    console.error('[GalCats] Erreur :', err.message);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
 });
 
 app.post('/api/admin/gallery/categories', adminAuth, async (req, res) => {
