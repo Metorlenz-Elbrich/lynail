@@ -400,14 +400,6 @@ app.put('/api/admin/orders/:num', adminAuth, async (req, res) => {
    ADMIN — Gallery CRUD (update)
    ========================================== */
 
-const CAT_GRADIENTS = {
-  gel:        'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
-  'nail-art': 'linear-gradient(135deg,#c471f5,#fa71cd)',
-  acrylique:  'linear-gradient(135deg,#f7971e,#ffd200)',
-  naturel:    'linear-gradient(135deg,#d4fc79,#96e6a1)',
-  french:     'linear-gradient(135deg,#f8f9fa,#e9ecef)',
-};
-
 app.put('/api/admin/gallery/:id', adminAuth, async (req, res) => {
   const oid = toObjectId(req.params.id);
   if (!oid) return res.status(400).json({ error: 'ID invalide.' });
@@ -421,9 +413,11 @@ app.put('/api/admin/gallery/:id', adminAuth, async (req, res) => {
     updates.title = title.trim();
   }
   if (category !== undefined) {
-    if (!CAT_GRADIENTS[category]) return res.status(400).json({ error: 'Catégorie invalide.' });
+    const cats = await db.getGalleryCategories();
+    const validCat = cats.find(c => c.slug === category);
+    if (!validCat) return res.status(400).json({ error: 'Catégorie invalide.' });
     updates.category = category;
-    updates.gradient = CAT_GRADIENTS[category];
+    updates.gradient = validCat.gradient;
   }
   if (!Object.keys(updates).length) return res.status(400).json({ error: 'Aucun champ à mettre à jour.' });
 
@@ -461,15 +455,9 @@ app.post('/api/admin/gallery', adminAuth, uploadMedia.single('media'), async (re
   if (!title || !category) return res.status(400).json({ error: 'title et category requis.' });
   if (String(title).length > 100) return res.status(400).json({ error: 'Titre trop long.' });
 
-  const catGradients = {
-    gel:        'linear-gradient(135deg,#fbc2eb,#a6c1ee)',
-    'nail-art': 'linear-gradient(135deg,#c471f5,#fa71cd)',
-    acrylique:  'linear-gradient(135deg,#f7971e,#ffd200)',
-    naturel:    'linear-gradient(135deg,#d4fc79,#96e6a1)',
-    french:     'linear-gradient(135deg,#f8f9fa,#e9ecef)',
-  };
-  const allowedCats = new Set(Object.keys(catGradients));
-  if (!allowedCats.has(category)) return res.status(400).json({ error: 'Catégorie invalide.' });
+  const cats = await db.getGalleryCategories();
+  const validCat = cats.find(c => c.slug === category);
+  if (!validCat) return res.status(400).json({ error: 'Catégorie invalide.' });
 
   let finalUrl = '';
   let isVideo  = false;
@@ -488,7 +476,7 @@ app.post('/api/admin/gallery', adminAuth, uploadMedia.single('media'), async (re
       if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('protocole invalide');
       finalUrl = imageUrl.trim();
     }
-    const item = await db.insertGalleryItem({ title: title.trim(), category, imageUrl: finalUrl, isVideo, gradient: catGradients[category] });
+    const item = await db.insertGalleryItem({ title: title.trim(), category, imageUrl: finalUrl, isVideo, gradient: validCat.gradient });
     res.status(201).json(item);
   } catch (err) {
     if (err.message.includes('invalide')) return res.status(400).json({ error: 'URL invalide. Utilisez une URL http ou https.' });
@@ -750,12 +738,12 @@ const GRADIENT_PRESETS = new Set([
   'linear-gradient(135deg,#d4fc79,#96e6a1)',
   'linear-gradient(135deg,#f8f9fa,#e9ecef)',
   'linear-gradient(135deg,#667eea,#764ba2)',
-  'linear-gradient(135deg,#ff9a9e,#fad0c4)',
-  'linear-gradient(135deg,#2c3e50,#3498db)',
-  'linear-gradient(135deg,#f6d365,#fda085)',
-  'linear-gradient(135deg,#e0c3fc,#8ec5fc)',
-  'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
-  'linear-gradient(135deg,#fccb90,#d57eeb)',
+  'linear-gradient(135deg,#f093fb,#f5576c)',
+  'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'linear-gradient(135deg,#fa709a,#fee140)',
+  'linear-gradient(135deg,#30cfd0,#330867)',
+  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
 ]);
 
 function slugify(str) {
