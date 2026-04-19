@@ -342,12 +342,66 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .item-check { accent-color: var(--pink); flex-shrink: 0; }
 
-    @media (max-width: 600px) {
-      .tab-btn { padding: 0.75rem 1rem; font-size: 0.8rem; }
-      .tab-panel { padding: 1rem; }
+    /* ── Admin responsive ── */
+    @media (max-width: 768px) {
+      /* Header */
       header { padding: 0.75rem 1rem; }
-      .order-stepper { gap: 0; }
-      .step-dot { width: 22px; height: 22px; font-size: 0.65rem; }
+      .header-brand { font-size: 0.95rem; }
+
+      /* Tabs */
+      .tabs { padding: 0 0.5rem; }
+      .tab-btn { padding: 0.75rem 0.85rem; font-size: 0.78rem; }
+
+      /* Tab panels */
+      .tab-panel { padding: 1rem; }
+
+      /* Form rows — single column on mobile */
+      .form-row { grid-template-columns: 1fr; }
+      .add-card { padding: 1rem; }
+
+      /* Item rows — wrap content */
+      .item-row { flex-wrap: wrap; gap: 0.6rem; padding: 0.85rem 1rem; }
+      .item-thumb { width: 46px; height: 46px; }
+      .item-info { min-width: 0; flex: 1 1 120px; }
+      .btn-edit, .btn-del { font-size: 0.75rem; padding: 0.35rem 0.6rem; }
+
+      /* Gallery grid */
+      .gallery-preview { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+      /* Orders search */
+      .orders-search { flex-direction: column; gap: 0.5rem; }
+      .orders-search input { min-width: 0; width: 100%; }
+      .orders-search select { width: 100%; }
+
+      /* Order card */
+      .order-card { padding: 1rem; }
+      .order-card-head { gap: 0.5rem; }
+      .order-actions { flex-direction: column; gap: 0.5rem; }
+      .order-status-sel { width: 100%; min-width: 0; }
+      .btn-order-save   { width: 100%; }
+
+      /* Stepper */
+      .step-dot  { width: 22px; height: 22px; font-size: 0.62rem; }
+      .step-line { height: 2px; }
+      .step-labels { font-size: 0.62rem; }
+
+      /* Edit modals */
+      .edit-box     { padding: 1.25rem; width: 95%; }
+      .gal-edit-box { padding: 1.25rem; width: 95%; }
+
+      /* Gradient swatches */
+      .gradient-swatch { width: 30px; height: 30px; }
+
+      /* Toast */
+      .toast-adm { right: 0.75rem; left: 0.75rem; max-width: unset; }
+    }
+
+    @media (max-width: 480px) {
+      .gallery-preview { grid-template-columns: repeat(2, 1fr); }
+      .panel-title      { font-size: 1.1rem; }
+      .tab-btn          { padding: 0.65rem 0.65rem; font-size: 0.72rem; }
+      .bulk-bar         { flex-wrap: wrap; gap: 0.5rem; }
+      .bulk-bar .btn-bulk-del { margin-left: 0; width: 100%; }
     }
   </style>
 </head>
