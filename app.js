@@ -100,17 +100,23 @@ async function loadGalleryCategories() {
       if (Array.isArray(data) && data.length > 0) cats = data;
     }
   } catch { /* silencieux */ }
-  galleryCatLabels = {};
+  galleryCatLabels = { all: 'Tous' };
   cats.forEach(c => { galleryCatLabels[c.slug] = c.label; });
-  buildGalleryFilters(cats);
+  buildGalleryFilters([{ slug: 'all', label: 'Tous' }, ...cats]);
+  renderGallery(document.querySelector('.gallery-filters .filter-btn.active')?.dataset.filter || 'all');
 }
 
 function buildGalleryFilters(cats) {
   const container = document.querySelector('.gallery-filters');
   if (!container) return;
-  container.innerHTML = '<button class="filter-btn active" data-filter="all">Tous</button>' +
-    cats.map(c => `<button class="filter-btn" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`).join('');
-  // Listener is on the container (delegation) — no per-button binding needed
+  const currentFilter = container.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+  container.innerHTML = cats.map(c =>
+    `<button class="filter-btn${c.slug === currentFilter ? ' active' : ''}" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`
+  ).join('');
+  if (!container.querySelector('.filter-btn.active')) {
+    const allBtn = container.querySelector('[data-filter="all"]');
+    if (allBtn) allBtn.classList.add('active');
+  }
 }
 
 /* Delegation unique sur .gallery-filters — survive les rebuilds de innerHTML */
@@ -212,19 +218,36 @@ async function loadServices() {
     const services = await res.json();
     const grid = document.getElementById('servicesGrid');
     if (!grid) return;
-    grid.innerHTML = services.map(s => {
-      const isFormation = s.title === 'Formation';
-      return `
+    grid.innerHTML = services.map(s => `
       <div class="service-card${s.featured ? ' featured' : ''}">
         ${s.featured ? '<span class="badge">Populaire</span>' : ''}
         <div class="service-icon">${escHtml(s.icon)}</div>
         <h3>${escHtml(s.title)}</h3>
         <p>${escHtml(s.description)}</p>
         <div class="service-price">À partir de <strong>${escHtml(s.price)}</strong></div>
-      </div>`;
-    }).join('');
+        <button class="btn btn-sm btn-primary service-book-btn" data-service="${escHtml(s.title)}">Réserver</button>
+      </div>`).join('');
   } catch { /* silencieux */ }
 }
+
+document.getElementById('servicesGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.service-book-btn');
+  if (!btn) return;
+  const serviceName = btn.dataset.service;
+
+  document.getElementById('commande').scrollIntoView({ behavior: 'smooth' });
+
+  setTimeout(() => {
+    const radios = document.querySelectorAll('input[name="service"]');
+    let matched = false;
+    radios.forEach(r => {
+      if (!matched && r.value.toLowerCase().includes(serviceName.toLowerCase())) {
+        r.checked = true;
+        matched = true;
+      }
+    });
+  }, 400);
+});
 
 /* ---- TUTORIALS ---- */
 let tutorialsMap = new Map();
