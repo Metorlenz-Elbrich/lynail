@@ -78,19 +78,31 @@ let currentFilteredItems = [];
 
 async function loadGallery() {
   try {
-    const [galRes, catRes] = await Promise.all([
-      fetch(`${API}/api/gallery`),
-      fetch(`${API}/api/gallery/categories`),
-    ]);
-    if (galRes.ok) galleryData = await galRes.json();
-    if (catRes.ok) {
-      const cats = await catRes.json();
-      galleryCatLabels = {};
-      cats.forEach(c => { galleryCatLabels[c.slug] = c.label; });
-      buildGalleryFilters(cats);
-    }
+    const res = await fetch(`${API}/api/gallery`);
+    if (res.ok) galleryData = await res.json();
   } catch { /* silencieux */ }
   renderGallery();
+}
+
+async function loadGalleryCategories() {
+  const FALLBACK = [
+    { slug:'gel',       label:'Pose Gel'   },
+    { slug:'nail-art',  label:'Nail Art'   },
+    { slug:'acrylique', label:'Acrylique'  },
+    { slug:'naturel',   label:'Naturel'    },
+    { slug:'french',    label:'French'     },
+  ];
+  let cats = FALLBACK;
+  try {
+    const res = await fetch(`${API}/api/gallery/categories`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) cats = data;
+    }
+  } catch { /* silencieux */ }
+  galleryCatLabels = {};
+  cats.forEach(c => { galleryCatLabels[c.slug] = c.label; });
+  buildGalleryFilters(cats);
 }
 
 function buildGalleryFilters(cats) {
@@ -209,21 +221,10 @@ async function loadServices() {
         <h3>${escHtml(s.title)}</h3>
         <p>${escHtml(s.description)}</p>
         <div class="service-price">À partir de <strong>${escHtml(s.price)}</strong></div>
-        <a href="${isFormation ? '#tutorat' : '#commande'}" class="btn btn-sm btn-reserv" data-service="${isFormation ? '' : escHtml(s.title)}">${isFormation ? 'En savoir +' : 'Réserver'}</a>
       </div>`;
     }).join('');
   } catch { /* silencieux */ }
 }
-
-document.getElementById('servicesGrid').addEventListener('click', e => {
-  const a = e.target.closest('.btn-reserv');
-  if (!a || !a.dataset.service) return;
-  const titleLower = a.dataset.service.toLowerCase();
-  const radios = [...document.querySelectorAll('input[name="service"]')];
-  const match = radios.find(r => r.value.toLowerCase().includes(titleLower) || titleLower.includes(r.value.toLowerCase()));
-  if (match) { match.checked = true; match.dispatchEvent(new Event('change', { bubbles: true })); }
-  // href="#commande" on the <a> handles the smooth scroll natively
-});
 
 /* ---- TUTORIALS ---- */
 let tutorialsMap = new Map();
@@ -799,6 +800,7 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
    INITIALISATION ASYNCHRONE
    ========================================== */
 loadGallery();
+loadGalleryCategories();
 loadServices();
 loadTutorials();
 loadPrestations();
