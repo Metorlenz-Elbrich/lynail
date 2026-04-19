@@ -191,11 +191,25 @@ async function loadServices() {
         <h3>${escHtml(s.title)}</h3>
         <p>${escHtml(s.description)}</p>
         <div class="service-price">À partir de <strong>${escHtml(s.price)}</strong></div>
-        <a href="${isFormation ? '#tutorat' : '#commande'}" class="btn btn-sm">${isFormation ? 'En savoir +' : 'Réserver'}</a>
+        <button class="btn btn-sm btn-reserv" data-target="${isFormation ? 'tutorat' : 'commande'}" data-service="${isFormation ? '' : escHtml(s.title)}">${isFormation ? 'En savoir +' : 'Réserver'}</button>
       </div>`;
     }).join('');
   } catch { /* silencieux */ }
 }
+
+document.getElementById('servicesGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.btn-reserv');
+  if (!btn) return;
+  const section = document.getElementById(btn.dataset.target);
+  if (!section) return;
+  if (btn.dataset.service) {
+    const titleLower = btn.dataset.service.toLowerCase();
+    const radios = [...document.querySelectorAll('input[name="service"]')];
+    const match = radios.find(r => r.value.toLowerCase().includes(titleLower) || titleLower.includes(r.value.toLowerCase()));
+    if (match) { match.checked = true; match.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 /* ---- TUTORIALS ---- */
 let tutorialsMap = new Map();
