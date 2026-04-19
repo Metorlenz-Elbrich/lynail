@@ -669,8 +669,7 @@ Si tu ne veux pas payer de domaine, ou si tu veux la solution la plus rapide pos
 
 ```
 Visiteur à Douala, Cameroun
-        │
-        │ connexion locale ~10ms
+        │        │ connexion locale ~10ms
         ▼
 ┌─────────────────────────────────┐
 │  Cloudflare — Data center Douala│  ← Fichiers statiques servis en cache

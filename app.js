@@ -70,6 +70,7 @@ document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 /* ---- GALLERY ---- */
 let galleryData = [];
+let galleryCatLabels = { gel:'Pose Gel', 'nail-art':'Nail Art', acrylique:'Acrylique', naturel:'Naturel', french:'French' };
 
 const galleryGrid = document.getElementById('galleryGrid');
 let lightboxIndex = 0;
@@ -77,10 +78,33 @@ let currentFilteredItems = [];
 
 async function loadGallery() {
   try {
-    const res = await fetch(`${API}/api/gallery`);
-    if (res.ok) galleryData = await res.json();
+    const [galRes, catRes] = await Promise.all([
+      fetch(`${API}/api/gallery`),
+      fetch(`${API}/api/gallery/categories`),
+    ]);
+    if (galRes.ok) galleryData = await galRes.json();
+    if (catRes.ok) {
+      const cats = await catRes.json();
+      galleryCatLabels = {};
+      cats.forEach(c => { galleryCatLabels[c.slug] = c.label; });
+      buildGalleryFilters(cats);
+    }
   } catch { /* silencieux */ }
   renderGallery();
+}
+
+function buildGalleryFilters(cats) {
+  const container = document.querySelector('.gallery-filters');
+  if (!container) return;
+  container.innerHTML = '<button class="filter-btn active" data-filter="all">Tous</button>' +
+    cats.map(c => `<button class="filter-btn" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`).join('');
+  container.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderGallery(btn.dataset.filter);
+    });
+  });
 }
 
 function renderGallery(filter = 'all') {
@@ -111,17 +135,8 @@ function renderGallery(filter = 'all') {
 }
 
 function categoryLabel(c) {
-  const labels = { gel:'Pose Gel', 'nail-art':'Nail Art', acrylique:'Acrylique', naturel:'Naturel', french:'French' };
-  return labels[c] || c;
+  return galleryCatLabels[c] || c;
 }
-
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderGallery(btn.dataset.filter);
-  });
-});
 
 /* LIGHTBOX */
 const lightbox  = document.getElementById('lightbox');
@@ -191,24 +206,20 @@ async function loadServices() {
         <h3>${escHtml(s.title)}</h3>
         <p>${escHtml(s.description)}</p>
         <div class="service-price">À partir de <strong>${escHtml(s.price)}</strong></div>
-        <button class="btn btn-sm btn-reserv" data-target="${isFormation ? 'tutorat' : 'commande'}" data-service="${isFormation ? '' : escHtml(s.title)}">${isFormation ? 'En savoir +' : 'Réserver'}</button>
+        <a href="${isFormation ? '#tutorat' : '#commande'}" class="btn btn-sm btn-reserv" data-service="${isFormation ? '' : escHtml(s.title)}">${isFormation ? 'En savoir +' : 'Réserver'}</a>
       </div>`;
     }).join('');
   } catch { /* silencieux */ }
 }
 
 document.getElementById('servicesGrid').addEventListener('click', e => {
-  const btn = e.target.closest('.btn-reserv');
-  if (!btn) return;
-  const section = document.getElementById(btn.dataset.target);
-  if (!section) return;
-  if (btn.dataset.service) {
-    const titleLower = btn.dataset.service.toLowerCase();
-    const radios = [...document.querySelectorAll('input[name="service"]')];
-    const match = radios.find(r => r.value.toLowerCase().includes(titleLower) || titleLower.includes(r.value.toLowerCase()));
-    if (match) { match.checked = true; match.dispatchEvent(new Event('change', { bubbles: true })); }
-  }
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const a = e.target.closest('.btn-reserv');
+  if (!a || !a.dataset.service) return;
+  const titleLower = a.dataset.service.toLowerCase();
+  const radios = [...document.querySelectorAll('input[name="service"]')];
+  const match = radios.find(r => r.value.toLowerCase().includes(titleLower) || titleLower.includes(r.value.toLowerCase()));
+  if (match) { match.checked = true; match.dispatchEvent(new Event('change', { bubbles: true })); }
+  // href="#commande" on the <a> handles the smooth scroll natively
 });
 
 /* ---- TUTORIALS ---- */
