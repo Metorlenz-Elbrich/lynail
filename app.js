@@ -98,14 +98,17 @@ function buildGalleryFilters(cats) {
   if (!container) return;
   container.innerHTML = '<button class="filter-btn active" data-filter="all">Tous</button>' +
     cats.map(c => `<button class="filter-btn" data-filter="${escHtml(c.slug)}">${escHtml(c.label)}</button>`).join('');
-  container.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderGallery(btn.dataset.filter);
-    });
-  });
+  // Listener is on the container (delegation) — no per-button binding needed
 }
+
+/* Delegation unique sur .gallery-filters — survive les rebuilds de innerHTML */
+document.querySelector('.gallery-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGallery(btn.dataset.filter);
+});
 
 function renderGallery(filter = 'all') {
   currentFilteredItems = filter === 'all' ? galleryData : galleryData.filter(i => i.category === filter);
